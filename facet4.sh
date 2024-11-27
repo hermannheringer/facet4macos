@@ -990,60 +990,136 @@ fi
 
 # Lista de domínios para bloquear
 telemetryDomains="
-# Telemetry and Ad domains for Microsoft, Apple, and General Platforms
-
-127.0.0.1    data.microsoft.com
-127.0.0.1    us-mobile.events.data.microsoft.com
-127.0.0.1    uk-mobile.events.data.microsoft.com
-127.0.0.1    eu-mobile.events.data.microsoft.com
-127.0.0.1    jp-mobile.events.data.microsoft.com
-127.0.0.1    settings-win.data.microsoft.com
-127.0.0.1    msftconnecttest.com
-127.0.0.1    msftncsi.com
-127.0.0.1    v10.vortex-win.data.microsoft.com
-127.0.0.1    v20.vortex-win.data.microsoft.com
-127.0.0.1    v10.vortex.data.microsoft.com
-127.0.0.1    v20.vortex.data.microsoft.com
-127.0.0.1    telemetry.microsoft.com
-127.0.0.1    watson.microsoft.com
-127.0.0.1    oca.microsoft.com
-127.0.0.1    vortex.data.microsoft.com
-127.0.0.1    vortex-win.data.microsoft.com
+# Microsoft Telemetry and Ads
 127.0.0.1    activity.windows.com
+127.0.0.1    ads.msn.com
+127.0.0.1    analytics.microsoft.com
+127.0.0.1    browser.events.data.msn.com
+127.0.0.1    checkappexec.microsoft.com
+127.0.0.1    data.microsoft.com
+127.0.0.1    diagnostics.support.microsoft.com
+127.0.0.1    edge.microsoft.com
+127.0.0.1    eu-mobile.events.data.microsoft.com
 127.0.0.1    feedback.windows.com
 127.0.0.1    i1.services.social.microsoft.com
-127.0.0.1    diagnostics.support.microsoft.com
-127.0.0.1    ads.msn.com
-127.0.0.1    ad.doubleclick.net
-127.0.0.1    analytics.microsoft.com
-127.0.0.1    edge.microsoft.com
-127.0.0.1    telemetry.urs.microsoft.com
-127.0.0.1    browser.events.data.msn.com
+127.0.0.1    jp-mobile.events.data.microsoft.com
+127.0.0.1    msftconnecttest.com
+127.0.0.1    msftncsi.com
+127.0.0.1    oca.microsoft.com
 127.0.0.1    sb.scorecardresearch.com
+127.0.0.1    scorecardresearch.com
+127.0.0.1    settings-win.data.microsoft.com
+127.0.0.1    telemetry.microsoft.com
+127.0.0.1    telemetry.urs.microsoft.com
+127.0.0.1    uk-mobile.events.data.microsoft.com
+127.0.0.1    us-mobile.events.data.microsoft.com
+127.0.0.1    v10.vortex.data.microsoft.com
+127.0.0.1    v10.vortex-win.data.microsoft.com
+127.0.0.1    v20.vortex.data.microsoft.com
+127.0.0.1    v20.vortex-win.data.microsoft.com
+127.0.0.1    vortex.data.microsoft.com
+127.0.0.1    vortex-win.data.microsoft.com
+127.0.0.1    watson.microsoft.com
 
-# Apple Telemetry and Ad domains
-127.0.0.1    telemetry.apple.com
+# Apple Telemetry
+127.0.0.1    analytics.apple.com
+127.0.0.1    api-glb-crashlytics.itunes.apple.com
 127.0.0.1    config.push.apple.com
-127.0.0.1    metrics.apple.com
+127.0.0.1    e.crashlytics.com
+127.0.0.1    events.apple.com
+127.0.0.1    experience.apple.com
+127.0.0.1    gateway.push.apple.com
 127.0.0.1    gsp10-ssl.ls.apple.com
 127.0.0.1    gsp11-ssl.ls.apple.com
+127.0.0.1    icloud-content.com
 127.0.0.1    init-p01md.apple.com
+127.0.0.1    metrics.apple.com
+127.0.0.1    radarsubmissions.apple.com
+127.0.0.1    sp.analytics.itunes.apple.com
+127.0.0.1    telemetry.apple.com
 
-# General Ad and Telemetry domains
-127.0.0.1    google-analytics.com
+# Google Ads and Telemetry
+127.0.0.1    ad.doubleclick.net
 127.0.0.1    ads.google.com
+127.0.0.1    adservice.google.co.in
+127.0.0.1    adservice.google.com
+127.0.0.1    adservice.google.com.ar
+127.0.0.1    adservice.google.com.au
+127.0.0.1    adservice.google.com.co
+127.0.0.1    adservice.google.com.mx
+127.0.0.1    adservice.google.com.tr
+127.0.0.1    adssettings.google.com
+127.0.0.1    beacon.google.com
+127.0.0.1    beacon.scorecardresearch.com
+127.0.0.1    doubleclick.net
+127.0.0.1    googleads.g.doubleclick.net
+127.0.0.1    googleadservices.com
+127.0.0.1    google-analytics.com
+127.0.0.1    googleoptimize.com
+127.0.0.1    googletagmanager.com
+127.0.0.1    pagead2.googlesyndication.com
+127.0.0.1    secure-us.imrworldwide.com
+127.0.0.1    ssl.google-analytics.com
+127.0.0.1    stats.g.doubleclick.net
+127.0.0.1    tagmanager.google.com
+127.0.0.1    tags.tiqcdn.com
+127.0.0.1    www.google-analytics.com
+
+# Facebook Ads and Tracking
+127.0.0.1    adaccount.instagram.com
+127.0.0.1    ads.facebook.com
+127.0.0.1    connect.facebook.net
+127.0.0.1    graph.facebook.com
+127.0.0.1    instagram.com/ads
+127.0.0.1    l.facebook.com
+127.0.0.1    marketing-api.facebook.com
+127.0.0.1    pixel.facebook.com
+127.0.0.1    tr.facebook.com
+127.0.0.1    tracking.facebook.com
+
+# Mozilla Telemetry
+127.0.0.1    blocklists.settings.services.mozilla.com
+127.0.0.1    crash-stats.mozilla.com
+127.0.0.1    data.mozilla.com
+127.0.0.1    fxmetrics.mozilla.com
+127.0.0.1    incoming.telemetry.mozilla.org
+127.0.0.1    shavar.services.mozilla.com
+127.0.0.1    telemetry.mozilla.org
+
+# General Ads and Telemetry
+127.0.0.1    ads.linkedin.com
+127.0.0.1    ads.pinterest.com
+127.0.0.1    ads.twitter.com
+127.0.0.1    ads.yahoo.com
+127.0.0.1    adserver.adtechus.com
+127.0.0.1    adssettings.yahoo.com
+127.0.0.1    analytics.snapchat.com
+127.0.0.1    analytics.tiktok.com
+127.0.0.1    app-measurement.com
+127.0.0.1    atdmt.com
+127.0.0.1    beacon.scorecardresearch.com
+127.0.0.1    cdn.ampproject.org
+127.0.0.1    chartbeat.com
+127.0.0.1    edge-metrics.com
+127.0.0.1    engine.adzerk.net
+127.0.0.1    hotjar.com
+127.0.0.1    logs.tiktokv.com
+127.0.0.1    m.stripe.network
+127.0.0.1    matomo.cloud
+127.0.0.1    media6degrees.com
+127.0.0.1    openx.net
+127.0.0.1    pagead.l.doubleclick.net
+127.0.0.1    pixel.quantserve.com
+127.0.0.1    quantserve.com
 127.0.0.1    scorecardresearch.com
 127.0.0.1    secure-us.imrworldwide.com
 127.0.0.1    ssl.google-analytics.com
-127.0.0.1    beacon.scorecardresearch.com
+127.0.0.1    stats.wordpress.com
 127.0.0.1    tags.tiqcdn.com
-127.0.0.1    connect.facebook.net
-127.0.0.1    graph.facebook.com
-127.0.0.1    googleads.g.doubleclick.net
-127.0.0.1    stats.g.doubleclick.net
-127.0.0.1    adssettings.google.com
-127.0.0.1    pagead2.googlesyndication.com
-127.0.0.1    doubleclick.net
+127.0.0.1    tracking-proxy-prod.msn.com
+127.0.0.1    yieldmanager.com
+
+# End of list of domains to block
 "
 
 # Verifica e adiciona domínios apenas se não existirem no arquivo
