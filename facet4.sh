@@ -219,11 +219,7 @@ echo "Disabling Dashboard..."
 # Step 1: Disable Dashboard using defaults (only effective on macOS Mojave and earlier)
 sudo defaults write com.apple.dashboard mcx-disabled -bool true
 
-# Step 2: Reload the Dock to apply changes (Dashboard is part of the Dock process)
-sleep 1
-launchctl kickstart -k system/com.apple.Dock.agent
-
-# Step 3: Verification to confirm setting is applied
+# Step 2: Verification to confirm setting is applied
 current_setting=$(defaults read com.apple.dashboard mcx-disabled 2>/dev/null)
 if [ "$current_setting" == "1" ]; then
     echo "Dashboard successfully disabled."
@@ -520,20 +516,6 @@ echo "cfprefsd adjustments complete."
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # Disable CrashReporter
 # The CrashReporter reports application crashes and sends information to Apple. Disabling it can save disk space and reduce resource usage.
 echo "Disabling CrashReporter..."
@@ -542,9 +524,16 @@ echo "Disabling CrashReporter..."
 sudo defaults write com.apple.CrashReporter DialogType none
 
 # Step 2: Unload the CrashReporter service to fully disable it
-sudo launchctl unload -w /System/Library/LaunchAgents/com.apple.CrashReporter.plist
-sudo launchctl unload -w /System/Library/LaunchDaemons/com.apple.ReportCrash.Root.plist
-sudo launchctl unload -w /System/Library/LaunchAgents/com.apple.ReportCrash.plist
+# sudo launchctl unload -w /System/Library/LaunchAgents/com.apple.CrashReporter.plist
+# LaunchAgents são geralmente executados no contexto de usuário, execute o comando sem sudo
+# sudo find / -name "com.apple.CrashReporter.plist"
+
+
+sudo launchctl bootstrap system /System/Library/LaunchDaemons/com.apple.CrashReporterSupportHelper.plist
+sudo launchctl bootout system /System/Library/LaunchDaemons/com.apple.CrashReporterSupportHelper.plist
+
+launchctl bootstrap system /System/Library/LaunchAgents/com.apple.ReportCrash.plist
+launchctl bootout system /System/Library/LaunchAgents/com.apple.ReportCrash.plist
 
 # Verification
 sleep 1
@@ -558,39 +547,11 @@ echo "CrashReporter has been disabled."
 
 
 
-# Increase the File Descriptor Limit
 # Increasing the file descriptor limit can allow more files to be open simultaneously, improving performance for certain applications.
 echo "Increasing file descriptor limit..."
 
 # Step 1: Temporarily increase the limit for the current session (useful for immediate effect in the current terminal)
 ulimit -n 65536
-
-# Step 2: Make the change persistent by adding it to /etc/sysctl.conf or /Library/LaunchDaemons
-# Create a LaunchDaemon to apply the limit at system startup
-
-sudo bash -c 'cat > /Library/LaunchDaemons/limit.maxfiles.plist' << EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>Label</key>
-    <string>limit.maxfiles</string>
-    <key>ProgramArguments</key>
-    <array>
-        <string>launchctl</string>
-        <string>limit</string>
-        <string>maxfiles</string>
-        <string>65536</string>
-        <string>65536</string>
-    </array>
-    <key>RunAtLoad</key>
-    <true/>
-</dict>
-</plist>
-EOF
-
-# Step 3: Load the LaunchDaemon to apply the setting
-# sudo launchctl load -w /Library/LaunchDaemons/limit.maxfiles.plist
 
 # Verification
 sleep 1
@@ -609,18 +570,7 @@ echo "File descriptor limit adjustment complete."
 # SMS detects sudden movements to protect hard drives. Disabling it can save resources, especially on SSD-based systems.
 echo "Disabling Sudden Motion Sensor (SMS)..."
 
-# Step 1: Disable SMS
 sudo pmset -a sms 0
-
-# Step 2: Verification to ensure SMS is disabled
-sleep 1
-current_sms_status=$(pmset -g | grep sms | awk '{print $2}')
-
-if [ "$current_sms_status" == "0" ]; then
-    echo "Sudden Motion Sensor (SMS) successfully disabled."
-else
-    echo "Failed to disable Sudden Motion Sensor (SMS). Please check permissions or try again."
-fi
 
 echo "Sudden Motion Sensor (SMS) has been disabled."
 
@@ -692,61 +642,8 @@ echo "Network buffer adjustment complete."
 # Flushing the dscacheutil cache can help manage space and free up memory for other processes.
 echo "Flushing dscacheutil cache..."
 
-# Step 1: Clear the dscacheutil cache
 sudo dscacheutil -flushcache
 echo "dscacheutil cache flushed."
-
-# Step 2: Optional - Create a cron job to flush cache periodically
-# This step sets up a cron job to flush the cache daily. You may adjust the frequency as needed.
-if ! crontab -l | grep -q "dscacheutil -flushcache"; then
-    (crontab -l 2>/dev/null; echo "0 0 * * * sudo dscacheutil -flushcache") | crontab -
-    echo "Scheduled daily cache flush for dscacheutil at midnight."
-else
-    echo "Periodic cache flush is already scheduled."
-fi
-
-echo "dscacheutil cache management complete."
-
-
-
-# Create a LaunchAgent to enforce JoinMode=1 at login
-echo "Creating LaunchAgent to enforce WiFi JoinMode to Strongest..."
-
-# Define the path for the LaunchAgent
-LAUNCH_AGENT_PATH="/Library/LaunchAgents/com.user.joinmode.plist"
-
-# Create the LaunchAgent plist file
-sudo bash -c 'cat > '"$LAUNCH_AGENT_PATH" << EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-  <dict>
-    <key>Label</key>
-    <string>com.user.joinmode</string>
-    <key>ProgramArguments</key>
-    <array>
-      <string>/bin/bash</string>
-      <string>-c</string>
-      <string>/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport prefs JoinMode=1 && networksetup -setairportpower "$network_service" off && sleep 2 && networksetup -setairportpower "$network_service" on</string>
-    </array>
-    <key>RunAtLoad</key>
-    <true/>
-    <key>KeepAlive</key>
-    <false/>
-  </dict>
-</plist>
-EOF
-
-# Load the LaunchAgent
-sudo launchctl load -w "$LAUNCH_AGENT_PATH"
-
-echo "LaunchAgent created and loaded successfully."
-
-# To unload and remove the LaunchAgent in the future, run:
-
-# sudo launchctl unload -w /Library/LaunchAgents/com.user.joinmode.plist
-# sudo rm /Library/LaunchAgents/com.user.joinmode.plist
-# echo "LaunchAgent successfully removed."
 
 
 
@@ -785,62 +682,15 @@ echo "LaunchServices Database reset successfully."
 
 
 
-# Disable ARDAgent
-# ARDAgent is a macOS service used by Apple Remote Desktop for remote monitoring and event reporting.
-# Disabling it can reduce CPU and memory usage, especially on systems where remote desktop functionality is not required.
-echo "Disabling ARDAgent..."
-
-# Set the ARDAgent LaunchDaemon to disabled
-sudo defaults write /System/Library/LaunchDaemons/com.apple.ARDAgent Disabled -bool true
-
-# Unload the ARDAgent service to stop it immediately
-sudo launchctl unload -w /System/Library/LaunchDaemons/com.apple.ARDAgent.plist
-
-# Verification step: Check if ARDAgent is inactive
-sleep 1
-if ! launchctl list | grep -q "com.apple.ARDAgent"; then
-    echo "ARDAgent successfully disabled."
-else
-    echo "Failed to disable ARDAgent. Please check permissions or try again."
-fi
-
-
-
-# Disable Help Viewer
-# The Help Viewer is a macOS application that provides documentation and help for system features and applications.
-# Disabling it may reduce memory usage, particularly if help services are rarely used.
-echo "Disabling Help Viewer..."
-
-# Set the help daemon (helpd) to disabled
-sudo defaults write /System/Library/LaunchAgents/com.apple.helpd Disabled -bool true
-
-# Unload the helpd service to stop it immediately
-sudo launchctl unload -w /System/Library/LaunchAgents/com.apple.helpd.plist
-
-# Verification step: Check if helpd is inactive
-sleep 1
-if ! launchctl list | grep -q "com.apple.helpd"; then
-    echo "Help Viewer successfully disabled."
-else
-    echo "Failed to disable Help Viewer. Please check permissions or try again."
-fi
-
-
-
 # Disable Universal Access Services
 # Disables accessibility services in macOS, such as visual and media accessibility, which can reduce memory and CPU usage
 # if these services are not required.
 echo "Disabling Universal Access Services..."
 
 # Disable and unload relevant accessibility services
-sudo defaults write /System/Library/LaunchAgents/com.apple.universalaccessd Disabled -bool true
-sudo defaults write /System/Library/LaunchAgents/com.apple.accessibility.AXVisualSupportAgent Disabled -bool true
-sudo defaults write /System/Library/LaunchAgents/com.apple.accessibility.mediaaccessibilityd Disabled -bool true
-
-# Unload the services to stop them immediately
-sudo launchctl unload -w /System/Library/LaunchAgents/com.apple.universalaccessd.plist
-sudo launchctl unload -w /System/Library/LaunchAgents/com.apple.accessibility.AXVisualSupportAgent.plist
-sudo launchctl unload -w /System/Library/LaunchAgents/com.apple.accessibility.mediaaccessibilityd.plist
+launchctl bootout gui/$(id -u) /System/Library/LaunchAgents/com.apple.universalaccessd.plist
+launchctl bootout gui/$(id -u) /System/Library/LaunchAgents/com.apple.accessibility.AXVisualSupportAgent.plist
+launchctl bootout gui/$(id -u) /System/Library/LaunchAgents/com.apple.accessibility.mediaaccessibilityd.plist
 
 # Verification step: Check if services are inactive
 sleep 1
@@ -857,11 +707,7 @@ fi
 # Disabling it can reduce CPU and memory usage, especially if Game Center features are unused.
 echo "Disabling Game Center..."
 
-# Set the Game Center daemon (gamed) to disabled
-sudo defaults write /System/Library/LaunchAgents/com.apple.gamed Disabled -bool true
-
-# Unload the Game Center service to stop it immediately
-sudo launchctl unload -w /System/Library/LaunchAgents/com.apple.gamed.plist
+sudo launchctl bootout gui/$(id -u) /System/Library/LaunchAgents/com.apple.gamed.plist
 
 # Verification step: Check if Game Center is inactive
 sleep 1
@@ -870,61 +716,6 @@ if ! launchctl list | grep -q "com.apple.gamed"; then
 else
     echo "Failed to disable Game Center. Please check permissions or try again."
 fi
-
-
-
-echo "Disabling Microsoft Office Automatic Updates..."
-
-# Step 1: Modify Preferences to Disable Automatic Updates
-# Set AutoUpdate preference to manual and disable startup at login
-sudo defaults write /Library/Preferences/com.microsoft.autoupdate2 HowToCheck -string "Manual"
-sudo defaults write /Library/Preferences/com.microsoft.autoupdate2 StartDaemonOnLogin -bool false
-sudo defaults write /Library/Preferences/com.microsoft.office OfficeAutoUpdateEnabled -bool false
-
-# Step 2: Unload LaunchAgent and LaunchDaemon for Microsoft AutoUpdate
-# Disable the Microsoft AutoUpdate LaunchAgent
-if sudo launchctl bootout system /Library/LaunchAgents/com.microsoft.update.agent.plist 2>/dev/null; then
-    echo "Microsoft AutoUpdate LaunchAgent successfully disabled."
-else
-    echo "Microsoft AutoUpdate LaunchAgent is not currently loaded or does not exist."
-fi
-
-# Disable the Microsoft AutoUpdate LaunchDaemon (if it exists)
-if sudo launchctl bootout system /Library/LaunchDaemons/com.microsoft.autoupdate.helper.plist 2>/dev/null; then
-    echo "Microsoft AutoUpdate LaunchDaemon successfully disabled."
-else
-    echo "Microsoft AutoUpdate LaunchDaemon is not currently loaded or does not exist."
-fi
-
-# Step 3: Verify Changes
-echo "Verifying if changes are applied..."
-
-# Check for preferences setting
-update_setting=$(defaults read /Library/Preferences/com.microsoft.autoupdate2 HowToCheck 2>/dev/null)
-if [ "$update_setting" == "Manual" ]; then
-    echo "Microsoft AutoUpdate preference successfully set to manual."
-else
-    echo "Failed to update Microsoft AutoUpdate preference."
-fi
-
-# Confirm that LaunchAgents and LaunchDaemons are not loaded
-agent_status=$(launchctl list | grep "com.microsoft.update.agent")
-daemon_status=$(launchctl list | grep "com.microsoft.autoupdate.helper")
-
-if [ -z "$agent_status" ]; then
-    echo "Microsoft AutoUpdate LaunchAgent is not running."
-else
-    echo "Microsoft AutoUpdate LaunchAgent is still active. Manual intervention may be required."
-fi
-
-if [ -z "$daemon_status" ]; then
-    echo "Microsoft AutoUpdate LaunchDaemon is not running."
-else
-    echo "Microsoft AutoUpdate LaunchDaemon is still active. Manual intervention may be required."
-fi
-
-echo "Microsoft Office AutoUpdate has been disabled. Restart the system to ensure changes take full effect."
-
 
 
 
@@ -976,6 +767,9 @@ echo "Analytics and Data Collection services have been disabled. A restart may b
 
 
 echo "Blocking telemetry and tracking by adding entries to the hosts file on macOS."
+
+sudo chmod 644 /etc/hosts
+
 # Caminho do arquivo hosts e do backup
 hostsPath="/etc/hosts"
 backupPath="/etc/hosts.bak"
@@ -990,6 +784,7 @@ fi
 
 # Lista de domínios para bloquear
 telemetryDomains="
+
 # Microsoft Telemetry and Ads
 127.0.0.1    activity.windows.com
 127.0.0.1    ads.msn.com
@@ -1133,6 +928,9 @@ done
 
 echo "Telemetry and tracking domains have been blocked in the hosts file."
 sleep 1
+
+sudo dscacheutil -flushcache
+sudo killall -HUP mDNSResponder
 
 
 
