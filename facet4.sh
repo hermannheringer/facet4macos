@@ -730,6 +730,8 @@ if [[ $(sudo defaults read /Library/Application\ Support/CrashReporter/Diagnosti
     sudo defaults write /Library/Application\ Support/CrashReporter/DiagnosticMessagesHistory.plist ThirdPartyDataSubmit -bool false
 fi
 
+sudo defaults write /Library/Preferences/com.apple.CrashReporter.plist DialogType none
+
 # Disable analytics for individual users if not already disabled
 if [[ $(sudo defaults read com.apple.SubmitDiagInfo AutoSubmit 2>/dev/null) != "0" ]]; then
     sudo defaults write com.apple.SubmitDiagInfo AutoSubmit -bool false
@@ -750,6 +752,16 @@ declare -a services=(
     "/System/Library/LaunchAgents/com.apple.amp.mediasharingd.plist"
     "/System/Library/LaunchAgents/com.apple.screensharing.plist"
     "/System/Library/LaunchAgents/com.apple.usagestats.plist"
+    "/System/Library/LaunchDaemons/com.apple.ReportCrash.Root.plist"
+    "/System/Library/LaunchDaemons/com.apple.ReportCrash.SafetyNet.plist"
+    "/System/Library/LaunchDaemons/com.apple.ReportPanic.plist"
+    "/System/Library/LaunchDaemons/com.apple.ReportMemoryException.plist"
+    "/System/Library/LaunchDaemons/com.apple.ReportSystemCrash.plist"
+    "/System/Library/LaunchDaemons/com.apple.watchdogd.plist" # Gerenciamento de falhas do sistema
+    "/System/Library/LaunchAgents/com.apple.ReportCrash.plist"
+    "/System/Library/LaunchAgents/com.apple.ReportPanic.plist"
+    "/System/Library/LaunchDaemons/com.apple.logd.plist"  # Central logging service
+    # "/System/Library/LaunchDaemons/com.apple.sysmond.plist" # System monitoring daemon
 )
 
 for service in "${services[@]}"; do
@@ -763,6 +775,9 @@ done
 
 # Final message
 echo "Analytics and Data Collection services have been disabled. A restart may be required for all changes to take full effect."
+
+
+# sudo launchctl load -w /System/Library/LaunchDaemons/com.apple.sysmond.plist
 
 
 
@@ -785,7 +800,7 @@ fi
 # Lista de domínios para bloquear
 telemetryDomains="
 
-# Microsoft Telemetry and Ads
+#Microsoft Telemetry and Ads
 127.0.0.1    activity.windows.com
 127.0.0.1    ads.msn.com
 127.0.0.1    analytics.microsoft.com
@@ -816,7 +831,7 @@ telemetryDomains="
 127.0.0.1    vortex-win.data.microsoft.com
 127.0.0.1    watson.microsoft.com
 
-# Apple Telemetry
+#Apple Telemetry
 127.0.0.1    analytics.apple.com
 127.0.0.1    api-glb-crashlytics.itunes.apple.com
 127.0.0.1    config.push.apple.com
@@ -833,7 +848,7 @@ telemetryDomains="
 127.0.0.1    sp.analytics.itunes.apple.com
 127.0.0.1    telemetry.apple.com
 
-# Google Ads and Telemetry
+#Google Ads and Telemetry
 127.0.0.1    ad.doubleclick.net
 127.0.0.1    ads.google.com
 127.0.0.1    adservice.google.co.in
@@ -860,7 +875,7 @@ telemetryDomains="
 127.0.0.1    tags.tiqcdn.com
 127.0.0.1    www.google-analytics.com
 
-# Facebook Ads and Tracking
+#Facebook Ads and Tracking
 127.0.0.1    adaccount.instagram.com
 127.0.0.1    ads.facebook.com
 127.0.0.1    connect.facebook.net
@@ -872,7 +887,7 @@ telemetryDomains="
 127.0.0.1    tr.facebook.com
 127.0.0.1    tracking.facebook.com
 
-# Mozilla Telemetry
+#Mozilla Telemetry
 127.0.0.1    blocklists.settings.services.mozilla.com
 127.0.0.1    crash-stats.mozilla.com
 127.0.0.1    data.mozilla.com
@@ -881,7 +896,7 @@ telemetryDomains="
 127.0.0.1    shavar.services.mozilla.com
 127.0.0.1    telemetry.mozilla.org
 
-# General Ads and Telemetry
+#General Ads and Telemetry
 127.0.0.1    ads.linkedin.com
 127.0.0.1    ads.pinterest.com
 127.0.0.1    ads.twitter.com
@@ -914,7 +929,7 @@ telemetryDomains="
 127.0.0.1    tracking-proxy-prod.msn.com
 127.0.0.1    yieldmanager.com
 
-# End of list of domains to block
+#End of list of domains to block
 "
 
 # Verifica e adiciona domínios apenas se não existirem no arquivo
