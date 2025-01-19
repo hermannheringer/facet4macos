@@ -939,7 +939,7 @@ telemetryDomains="
 
 #onedrive EOL workaround
 127.0.0.1    oneclient.sfx.ms
-127.0.0.1    g.live.com
+# 127.0.0.1    g.live.com
 
 #End of list of domains to block
 "
