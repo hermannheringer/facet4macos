@@ -129,7 +129,42 @@ The **Facet4 macOS Optimization and Debloat Script** is a tool designed to enhan
    - **Reset LaunchServices Database**: Rebuilds app association database to reduce load times on older systems.
 
 ---
+**OneDrive Client for macOS 12.x Monterey EOL Workaround**
 
+Microsoft is forcing users to upgrade their Apple hardware by automatically updating the OneDrive client to an incompatible version.
+
+Here’s a temporary workaround:
+
+1. Remove the incompatible OneDrive.app from the Applications folder.
+2. Download and install the latest compatible version of the OneDrive client (v24.086.0428.0003) from https://oneclient.sfx.ms/Mac/Installers/24.086.0428.0003/universal/OneDrive.pkg.
+3. Block future updates by adding this line to your /etc/hosts file:
+
+   ```
+   127.0.0.1 oneclient.sfx.ms
+   ```
+
+This should keep OneDrive working until further notice. To aggressively remove the non-working app, use the Terminal command:
+
+```
+killall OneDrive
+
+rm -rf "/Applications/OneDrive.app"
+
+rm -rf ~/Library/Application\ Support/OneDrive
+rm -rf ~/Library/Caches/com.microsoft.OneDrive
+rm -rf ~/Library/Preferences/com.microsoft.OneDrive.plist
+
+rm -rf ~/Library/Containers/com.microsoft.OneDrive*
+
+sudo rm -rf /Library/Preferences/com.microsoft.OneDrive.plist
+
+sudo rm -rf /var/db/receipts/com.microsoft.OneDrive*
+sudo rm -rf /Library/Logs/Microsoft/OneDrive
+
+```
+
+
+---
 ## Usage Instructions
 
 1. **Run the Script**:
