@@ -129,6 +129,7 @@ The **Facet4 macOS Optimization and Debloat Script** is a tool designed to enhan
    - **Reset LaunchServices Database**: Rebuilds app association database to reduce load times on older systems.
 
 ---
+![onedrive_logo.png](README/onedrive_logo.png)
 **OneDrive Client for macOS 12.x Monterey EOL Workaround**
 
 Microsoft is forcing users to upgrade their Apple hardware by automatically updating the OneDrive client to an incompatible version.
