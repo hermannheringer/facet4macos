@@ -516,7 +516,7 @@ echo "cfprefsd adjustments complete."
 
 
 
-# Disable CrashReporter
+
 # The CrashReporter reports application crashes and sends information to Apple. Disabling it can save disk space and reduce resource usage.
 echo "Disabling CrashReporter..."
 
@@ -544,6 +544,8 @@ else
 fi
 
 echo "CrashReporter has been disabled."
+
+
 
 
 
@@ -735,10 +737,12 @@ sudo defaults write /Library/Preferences/com.apple.CrashReporter.plist DialogTyp
 # Disable analytics for individual users if not already disabled
 if [[ $(sudo defaults read com.apple.SubmitDiagInfo AutoSubmit 2>/dev/null) != "0" ]]; then
     sudo defaults write com.apple.SubmitDiagInfo AutoSubmit -bool false
+    sudo defaults write /Library/Preferences/com.apple.SubmitDiagInfo.plist AutoSubmit -bool false
 fi
-
+    
 if [[ $(sudo defaults read com.apple.SubmitDiagInfo ThirdPartyDataSubmit 2>/dev/null) != "0" ]]; then
     sudo defaults write com.apple.SubmitDiagInfo ThirdPartyDataSubmit -bool false
+    sudo defaults write /Library/Preferences/com.apple.SubmitDiagInfo.plist ThirdPartyDataSubmit -bool false
 fi
 
 # Unload analytics and diagnostic services if they are currently loaded
@@ -761,6 +765,7 @@ declare -a services=(
     "/System/Library/LaunchAgents/com.apple.ReportCrash.plist"
     "/System/Library/LaunchAgents/com.apple.ReportPanic.plist"
     "/System/Library/LaunchDaemons/com.apple.logd.plist"  # Central logging service
+    "/System/Library/LaunchDaemons/com.apple.ActivityMonitor.plist" # Monitoramento de atividade do sistema
     # "/System/Library/LaunchDaemons/com.apple.sysmond.plist" # System monitoring daemon
 )
 
@@ -772,6 +777,9 @@ for service in "${services[@]}"; do
         echo "$service is already disabled or not running."
     fi
 done
+
+# Disable dtrace if it is currently running
+sudo launchctl stop com.apple.dtrace
 
 # Final message
 echo "Analytics and Data Collection services have been disabled. A restart may be required for all changes to take full effect."
@@ -928,6 +936,10 @@ telemetryDomains="
 127.0.0.1    tags.tiqcdn.com
 127.0.0.1    tracking-proxy-prod.msn.com
 127.0.0.1    yieldmanager.com
+
+#onedrive EOL workaround
+127.0.0.1    oneclient.sfx.ms
+127.0.0.1    g.live.com
 
 #End of list of domains to block
 "
