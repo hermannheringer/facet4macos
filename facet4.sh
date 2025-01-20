@@ -733,6 +733,9 @@ if [[ $(sudo defaults read /Library/Application\ Support/CrashReporter/Diagnosti
 fi
 
 sudo defaults write /Library/Preferences/com.apple.CrashReporter.plist DialogType none
+sudo defaults write com.apple.UsageStats.plist Enable -bool false
+sudo defaults write com.apple.CrashReporter DialogType none
+
 
 # Disable analytics for individual users if not already disabled
 if [[ $(sudo defaults read com.apple.SubmitDiagInfo AutoSubmit 2>/dev/null) != "0" ]]; then
@@ -746,7 +749,7 @@ if [[ $(sudo defaults read com.apple.SubmitDiagInfo ThirdPartyDataSubmit 2>/dev/
 fi
 
 # Unload analytics and diagnostic services if they are currently loaded
-declare -a services=(
+declare -a services_backup=(
     "/System/Library/LaunchDaemons/com.apple.spindump.plist"
     "/System/Library/LaunchDaemons/com.apple.crashreporterd.plist"
     "/System/Library/LaunchDaemons/com.apple.syslogd.plist"
@@ -770,17 +773,48 @@ declare -a services=(
     # "/System/Library/LaunchDaemons/com.apple.sysmond.plist" # System monitoring daemon
 )
 
+declare -a services=(
+    # Diagnostic and Crash Reporting Services
+    "system/com.apple.spindump"
+    "system/com.apple.crashreporterd"
+    "system/com.apple.diagnosticd"
+    "system/com.apple.ReportCrash.Root"
+    "system/com.apple.ReportCrash.SafetyNet"
+    "system/com.apple.ReportPanic"
+    "system/com.apple.ReportMemoryException"
+    "system/com.apple.ReportSystemCrash"
+    "system/com.apple.watchdogd"
+    "user/com.apple.ReportCrash"
+    "user/com.apple.ReportPanic"
+
+    # Logging Services
+    "system/com.apple.syslogd"
+    "system/com.apple.aslmanager"
+    "system/com.apple.logd"
+
+    # Analytics and Usage Statistics
+    "system/com.apple.analyticsd"
+    "system/com.apple.usagestats"
+
+    # Media Sharing and Screen Sharing Services (usuários podem não precisar)
+    "user/com.apple.amp.mediasharingd"
+    "user/com.apple.screensharing"
+    
+    # DTrace and Performance Monitoring
+    "system/com.apple.dtrace"
+    "system/com.apple.ActivityMonitor"
+)
+
+
 for service in "${services[@]}"; do
     if sudo launchctl list | grep -q "$(basename "$service" .plist)"; then
-        sudo launchctl unload -w "$service"
-        echo "Unloaded $service"
+        sudo launchctl stop "$service"
+        sudo launchctl disable -w "$service"
+        echo "Disable $service"
     else
         echo "$service is already disabled or not running."
     fi
 done
-
-# Disable dtrace if it is currently running
-sudo launchctl stop com.apple.dtrace
 
 # Final message
 echo "Analytics and Data Collection services have been disabled. A restart may be required for all changes to take full effect."
