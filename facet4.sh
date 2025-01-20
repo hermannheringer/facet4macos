@@ -765,6 +765,7 @@ declare -a services=(
     "/System/Library/LaunchAgents/com.apple.ReportCrash.plist"
     "/System/Library/LaunchAgents/com.apple.ReportPanic.plist"
     "/System/Library/LaunchDaemons/com.apple.logd.plist"  # Central logging service
+    "/System/Library/LaunchDaemons/com.apple.dtrace.plist" # DTrace monitoring service
     "/System/Library/LaunchDaemons/com.apple.ActivityMonitor.plist" # Monitoramento de atividade do sistema
     # "/System/Library/LaunchDaemons/com.apple.sysmond.plist" # System monitoring daemon
 )
