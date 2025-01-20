@@ -104,6 +104,9 @@ else
 fi
 
 # Check if the Spotlight metadata service is running
+sudo launchctl unload -w /System/Library/LaunchDaemons/com.apple.metadata.mds.plist
+sudo launchctl disable -w system/com.apple.metadata.mds
+
 if launchctl list | grep -q "com.apple.metadata.mds"; then
     echo "Spotlight metadata service is still active. Try unloading it manually or check for dependent services."
 else
