@@ -2,16 +2,9 @@
 # Facet4 macOS Optimization and Debloat Script
 
 **Author**: Hermann Heringer  
-**Version**: 0.1  
+**Version**: 0.3  
 **Repository**: [GitHub](https://github.com/hermannheringer/)
 
----
-
-## Introduction
-
-#### "The Year 2024: Yet another script to 'optimize' macOS by butchering your OS with thousands of registry tweaks—backed by absolutely zero solid evidence (like ANOVA hypothesis test) to prove you're somehow smarter than the actual developers who built the system."
-
-#### *"Am I a genius? Nope. Am I clueless? Also nope. I just spend an unreasonable amount of time painstakingly testing every single function in this project. So yeah, it's not magic—it's obsession."*
 
 ---
 
@@ -35,7 +28,7 @@ The **Facet4 macOS Optimization and Debloat Script** is a tool designed to enhan
 ## Prerequisites
 
 1. **Disable System Integrity Protection (SIP)**:
-   - Boot into Recovery Mode (`Command (⌘) + R`).
+   - Boot into Recovery Mode (`Command (⌘) + R`) for Intel-based Macs or press and hold the **Power** button until "Loading Startup Options" appears for M-based Macs.
    - Open **Terminal** and run: `csrutil disable`.
    - Restart into macOS with: `sudo reboot now`.
 
@@ -50,7 +43,7 @@ The **Facet4 macOS Optimization and Debloat Script** is a tool designed to enhan
 
 4. **Run the Script as Root**:
    - Execute the script using: `sudo ./facet4.sh`.
-
+   - You can either copy, paste, or execute the instructions of your choice in the Terminal.
 ---
 
 ## Features
@@ -62,7 +55,7 @@ The **Facet4 macOS Optimization and Debloat Script** is a tool designed to enhan
 
 ### 2. Application Nap Deactivation
    - **Objective**: Disables Application Nap to prevent throttling of background applications, ensuring consistent multitasking performance.
-   - **Commands**: `defaults write NSGlobalDomain NSAppSleepDisabled -int 1`
+   - **Commands**: `sudo defaults write NSGlobalDomain NSAppSleepDisabled -bool true`
    - **Verification**: Confirms value with `defaults read`.
 
 ### 3. Spotlight Indexing and Metadata Optimization
@@ -70,7 +63,6 @@ The **Facet4 macOS Optimization and Debloat Script** is a tool designed to enhan
    - **Commands**:
      - Disable: `mdutil -a -i off`
      - Clear Index: `mdutil -a -E`
-   - **Verification**: Checks for inactive metadata services via `launchctl`.
 
 ### 4. UI Performance Enhancements (Reduce Motion and Transparency)
    - **Objective**: Reduces visual effects for improved system performance, especially on older hardware.
@@ -84,7 +76,7 @@ The **Facet4 macOS Optimization and Debloat Script** is a tool designed to enhan
 
 ### 6. Dashboard Removal (macOS Mojave and Earlier)
    - **Objective**: Removes the Dashboard to free up system memory and reduce CPU usage.
-   - **Commands**: `defaults write com.apple.dashboard mcx-disabled -bool true`
+   - **Commands**: `sudo defaults write com.apple.dashboard mcx-disabled -bool true`
    - **Verification**: Checks configuration status with `defaults read`.
 
 ### 7. Mail Indexing and Inline Attachments Management
@@ -105,7 +97,10 @@ The **Facet4 macOS Optimization and Debloat Script** is a tool designed to enhan
    - **Objective**: Disables Finder tags and recent apps in the Dock to reduce UI memory usage.
    - **Commands**:
      - `defaults write com.apple.finder ShowRecentTags -bool false`
-     - `defaults write com.apple.dock show-recents -bool false`
+     - `defaults write com.apple.finder ShowTagsInSidebar -bool false`
+     - `defaults write com.apple.finder ShowTagsInContextualMenu -bool false`
+     - `defaults write NSGlobalDomain NSDocumentAsynchronousKeyValueStore -bool false`
+     
    - **Restart**: Restarts Finder and Dock to apply settings.
 
 ### 11. Network Optimization
@@ -115,7 +110,58 @@ The **Facet4 macOS Optimization and Debloat Script** is a tool designed to enhan
      - Buffer Adjustments: `sysctl -w net.inet.tcp.recvspace=65536`, `sysctl -w net.inet.tcp.sendspace=65536`
 
 ### 12. Background Service Minimization
-   - **Objective**: Disables unnecessary background services (e.g., CrashReporter, Universal Access, Help Viewer) to conserve system resources.
+   - **Objective**: Optimize System Performance by Disabling Non-Essential macOS Background Services to conserve system resources.
+
+      **Crash Reporting and Diagnostics:**
+      - `com.apple.CrashReporterSupportHelper`
+      - `com.apple.crashreporterd`
+      - `com.apple.diagnosticd`
+      - `com.apple.ReportCrash`
+      - `com.apple.ReportCrash.Root`
+      - `com.apple.ReportCrash.SafetyNet`
+      - `com.apple.ReportMemoryException`
+      - `com.apple.ReportPanic`
+      - `com.apple.ReportSystemCrash`
+      - `com.apple.spindump`
+
+      **System Logs and Analytics:**
+      - `com.apple.emond.aslmanager`
+      - `com.apple.logd`
+      - `com.apple.logd_helper`
+      - `com.apple.analyticsd`
+      - `com.apple.memoryanalyticsd`
+      - `com.apple.syslogd`
+      - `com.apple.systemstats.analysis`
+      - `com.apple.systemstats.daily`
+      - `com.apple.systemstats.microstackshot_periodic`
+      - `com.apple.usagestats`
+      - `com.apple.wifianalyticsd`
+
+      **Accessibility and Universal Access:**
+      - `com.apple.universalaccessd`
+      - `com.apple.accessibility.AXVisualSupportAgent`
+      - `com.apple.accessibility.mediaaccessibilityd`
+      - `com.apple.speech.speechsynthesisd`
+      - `com.apple.voiceservicesd`
+
+      **Feedback and User Interaction:**
+      - `com.apple.appleseed.seedusaged`
+      - `com.apple.appleseed.fbahelperd`
+      - `com.apple.feedback.relay`
+      - `com.apple.feedback.reporter`
+      - `com.apple.Siri`
+      - `com.apple.assistantd`
+      - `com.apple.SiriAnalytics`
+
+      **Game and User Activity Monitoring:**
+      - `com.apple.gamed`
+      - `com.apple.ActivityMonitor`
+
+      **System Stability and Monitoring:**
+      - `com.apple.aslmanager`
+      - `com.apple.dtrace`
+      - `com.apple.watchdogd`
+
    - **Service Control**: Disables these services via `launchctl` and `defaults write`.
 
 ### 13. Telemetry and Tracking Block
@@ -189,12 +235,7 @@ sudo rm -rf /Library/Logs/Microsoft/OneDrive
 
 ## Reverting Changes
 
-Most settings can be reverted by adjusting the values in `defaults write` commands. Key reversions include:
-
-- **Application Nap**: `defaults write NSGlobalDomain NSAppSleepDisabled -int 0`
-- **Spotlight Indexing**: `sudo mdutil -a -i on`
-- **Dashboard**: `defaults write com.apple.dashboard mcx-disabled -bool false`
-- **Network Buffers**: Modify or remove `/etc/sysctl.conf` entries if added.
+Most settings can be reverted by adjusting the values in `defaults write` commands.
 
 > Note: Some configurations may reset during macOS updates, which could necessitate reapplying specific settings.
 
@@ -202,7 +243,7 @@ Most settings can be reverted by adjusting the values in `defaults write` comman
 
 ## Compatibility
 
-This script is tailored for macOS versions prior to Catalina, where certain services like Dashboard and various system daemons are accessible. Some commands may not be fully compatible with newer macOS releases, and behavior may vary across system versions.
+This script is tailored for macOS versions prior to Ventura (macOS 12), where certain services like Dashboard and various system daemons are accessible. Some commands may not be fully compatible with newer macOS releases, and behavior may vary across system versions.
 
 ---
 

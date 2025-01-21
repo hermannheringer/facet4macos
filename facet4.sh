@@ -3,11 +3,13 @@
 
 # Facet4 macOS Configuration Script
 # Author: Hermann Heringer
-# Version : 0.1
+# Version : 0.3
 # Source: https://github.com/hermannheringer/
 
 
-# 1º - Disable SIP: Boot into Recovery Mode 'Command (⌘) + R' open 'Terminal' and run 'csrutil disable'.
+# 1º - Disable SIP: Boot into Recovery Mode 'Command (⌘) + R'(Intel-based Macs).
+#      - Press and hold the **Power** button until "Loading startup options" appears (M-based Macs).
+#      - Select "Utilities" and then "Terminal" from the menu and run 'csrutil disable'.
 # 2º - Reboot into macOS and enable 'Root User'.
 #      - Open 'System Preferences' and click on 'Users & Groups'.
 #      - Select 'Login Options' on the left, then choose Join (or Edit) next to 'Network Account Server'.
@@ -63,7 +65,7 @@ fi
 echo "Disabling Application Nap..."
 
 # Step 1: Disable Application Nap globally
-sudo defaults write NSGlobalDomain NSAppSleepDisabled -int 1
+sudo defaults write NSGlobalDomain NSAppSleepDisabled -bool true
 
 # Step 2: Confirm that Application Nap is disabled
 sleep 1
@@ -77,7 +79,8 @@ fi
 
 # Step 3: Reload affected services to apply changes (if necessary)
 # Restart SystemUIServer to ensure that global settings take effect immediately
-launchctl kickstart -k system/com.apple.SystemUIServer
+# launchctl kickstart -k system/com.apple.SystemUIServer
+sudo killall SystemUIServer
 
 echo "Application Nap setting updated. Please verify changes if needed."
 
@@ -103,16 +106,6 @@ else
     echo "Failed to clear existing Spotlight index. Please check permissions."
 fi
 
-# Check if the Spotlight metadata service is running
-sudo launchctl unload -w /System/Library/LaunchDaemons/com.apple.metadata.mds.plist
-sudo launchctl disable -w system/com.apple.metadata.mds
-
-if launchctl list | grep -q "com.apple.metadata.mds"; then
-    echo "Spotlight metadata service is still active. Try unloading it manually or check for dependent services."
-else
-    echo "Spotlight metadata service is not running."
-fi
-
 echo "Spotlight indexing and metadata services are now disabled."
 
 
@@ -121,96 +114,36 @@ echo "Spotlight indexing and metadata services are now disabled."
 # Disables window animations and reduces transparency for improved performance and lower resource usage.
 echo "Disabling animations and reducing transparency..."
 
-# Step 1: Disable automatic window animations globally
-sudo defaults write NSGlobalDomain NSAutomaticWindowAnimationsEnabled -bool false
+# Step 1: Disable window animations globally
+defaults write NSGlobalDomain NSAutomaticWindowAnimationsEnabled -bool false
 
-# Step 2: Enable accessibility settings to reduce color differentiation, motion, and transparency
-sudo defaults write com.apple.Accessibility DifferentiateWithoutColor -int 1
-sudo defaults write com.apple.Accessibility ReduceMotionEnabled -int 1
-sudo defaults write com.apple.universalaccess reduceMotion -int 1
-sudo defaults write com.apple.universalaccess reduceTransparency -int 1
+# Step 2: Enable accessibility settings to reduce motion and transparency
+defaults write com.apple.Accessibility DifferentiateWithoutColor -bool true
+defaults write com.apple.Accessibility ReduceMotionEnabled -bool true
+defaults write com.apple.universalaccess reduceMotion -bool true
+defaults write com.apple.universalaccess reduceTransparency -bool true
 
-# Step 3: Apply settings for current user and ensure consistency with LaunchServices
-# Applies ReduceMotion and ReduceTransparency for the current user's host
-defaults -currentHost write NSGlobalDomain NSAutomaticWindowAnimationsEnabled -int 0
-defaults -currentHost write com.apple.universalaccess reduceMotion -int 1
-defaults -currentHost write com.apple.universalaccess reduceTransparency -int 1
+# Step 3: Apply settings for current user's host
+defaults -currentHost write NSGlobalDomain NSAutomaticWindowAnimationsEnabled -bool false
+defaults -currentHost write com.apple.universalaccess reduceMotion -bool true
+defaults -currentHost write com.apple.universalaccess reduceTransparency -bool true
 
-# Step 4: Restart LaunchAgents and LaunchServices to ensure settings take effect
-# Use launchctl to stop and start relevant services to apply changes immediately
-launchctl stop com.apple.Dock.agent
-launchctl start com.apple.Dock.agent
-
-launchctl stop com.apple.SystemUIServer.agent
-launchctl start com.apple.SystemUIServer.agent
-
-# Step 5: Verification to ensure settings are applied correctly
-sleep 1
-if [[ $(defaults read NSGlobalDomain NSAutomaticWindowAnimationsEnabled) == 0 ]]; then
-    echo "Automatic window animations disabled."
-else
-    echo "Failed to disable automatic window animations."
-fi
-
-if [[ $(defaults read com.apple.universalaccess reduceTransparency) == 1 ]]; then
-    echo "Transparency reduction enabled."
-else
-    echo "Failed to enable transparency reduction."
-fi
-
-if [[ $(defaults read com.apple.universalaccess reduceMotion) == 1 ]]; then
-    echo "Motion reduction enabled."
-else
-    echo "Failed to enable motion reduction."
-fi
+# Step 4: Restart services to ensure settings take effect
+# Note: You might need sudo for these if the services are not owned by the current user
+sudo killall Dock
+sudo killall SystemUIServer
 
 
 
-# Disable Feedback Assistant
+
 echo "Disabling Feedback Assistant..."
+# Disable Feedback Assistant visibility
+defaults write com.apple.feedbackassistant showFeedbackAssistant -bool false
 
-# Step 1: Set Feedback Assistant to not show in the system
-sudo defaults write com.apple.feedbackassistant showFeedbackAssistant -bool false
-
-# Function to check service status
-check_service_status() {
-    local service="$1"
-    if launchctl list | grep -q "$(basename "$service" .plist)"; then
-        echo "$service is currently running."
-        return 0
-    else
-        echo "$service is not running."
-        return 1
-    fi
-}
-
-# Function to attempt to unload a service
-unload_service() {
-    local service="$1"
-    local user_context="$2"
-
-    # Check if the service is loaded before trying to unload it
-    if check_service_status "$service"; then
-        # Attempt to unload the service
-        if sudo launchctl bootout "$user_context" "$service"; then
-            echo "$service successfully disabled."
-        else
-            echo "Failed to disable $service. It may require further permissions."
-        fi
-    else
-        echo "$service is not currently loaded. No action taken."
-    fi
-}
-
-# Step 2: Attempt to unload related LaunchAgents and LaunchDaemons for Feedback Assistant
-unload_service "/System/Library/LaunchAgents/com.apple.appleseed.seedusaged.plist" "gui/$(id -u)"
-unload_service "/System/Library/LaunchDaemons/com.apple.appleseed.fbahelperd.plist" "system"
-
-# Final verification of the services
-sleep 1
-echo "Verifying final status of Feedback Assistant services..."
-check_service_status "/System/Library/LaunchAgents/com.apple.appleseed.seedusaged.plist"
-check_service_status "/System/Library/LaunchDaemons/com.apple.appleseed.fbahelperd.plist"
+# Restart services that might be affected by these changes
+# This step is optional and meant for immediate effect; a system restart would also work
+sudo killall Finder
+sudo killall SystemUIServer
 
 echo "Feedback Assistant processing completed."
 
@@ -350,99 +283,41 @@ echo "Time Machine auto-backup has been disabled."
 
 
 
-# Disable Siri & Voice Services
 echo "Disabling Siri & Voice Services..."
+# Disable Siri visibility in the menu bar
+defaults write com.apple.Siri StatusMenuVisible -bool false
 
-# Step 1: Update user settings to disable Siri in the UI
-sudo defaults write com.apple.Siri StatusMenuVisible -bool false
-sudo defaults write com.apple.Siri UserHasDeclinedEnable -bool true
-sudo defaults write com.apple.assistant.support "Assistant Enabled" -bool false
+# Set that the user has declined to enable Siri
+defaults write com.apple.Siri UserHasDeclinedEnable -bool true
 
-# Function to check and unload services
-unload_service() {
-    local service_path="$1"
-    if sudo launchctl list | grep -q "$(basename "$service_path" .plist)"; then
-        if sudo launchctl bootout system "$service_path"; then
-            echo "$service_path successfully disabled."
-        else
-            echo "Failed to disable $service_path. It may require further permissions."
-        fi
-    else
-        echo "$service_path is not currently loaded."
-    fi
-}
+# Disable the Assistant
+defaults write com.apple.assistant.support "Assistant Enabled" -bool false
 
-# Attempt to unload relevant services
-unload_service "/System/Library/LaunchAgents/com.apple.Siri.plist"
-unload_service "/System/Library/LaunchAgents/com.apple.speechrecognitiond.plist"
-unload_service "/System/Library/LaunchAgents/com.apple.voiceservicesd.plist"
-unload_service "/System/Library/LaunchAgents/com.apple.assistantd.plist"
-
-# Step 3: Verification to ensure services are disabled
-sleep 1
-echo "Verifying services are disabled..."
-
-if ! launchctl list | grep -q "com.apple.Siri"; then
-    echo "Siri LaunchAgent is not running."
-else
-    echo "Siri LaunchAgent is still active."
-fi
-
-if ! launchctl list | grep -q "com.apple.speechrecognitiond"; then
-    echo "Speech Recognition service is not running."
-else
-    echo "Speech Recognition service is still active."
-fi
-
-if ! launchctl list | grep -q "com.apple.voiceservicesd"; then
-    echo "Voice Services daemon is not running."
-else
-    echo "Voice Services daemon is still active."
-fi
-
-if ! launchctl list | grep -q "com.apple.assistantd"; then
-    echo "Assistant daemon is not running."
-else
-    echo "Assistant daemon is still active."
-fi
+# Restart services that might be affected by these changes
+# This step is optional and meant for immediate effect; a system restart would also work
+sudo killall Finder
+sudo killall SystemUIServer
 
 echo "Siri and Voice Services processing complete."
 
 
 
-# Disable Finder Tags
-# Finder Tags index and manage file tags. Disabling this can save system resources.
+
 echo "Disabling Finder Tags..."
+# Desativar a exibição de tags recentes no Finder
+defaults write com.apple.finder ShowRecentTags -bool false
 
-# Step 1: Hide recent tags in Finder
-sudo defaults write com.apple.finder ShowRecentTags -bool false
+# Desativar a barra lateral de tags no Finder
+defaults write com.apple.finder ShowTagsInSidebar -bool false
 
-# Step 2: Disable Spotlight indexing for tags to reduce resource usage
-# Turn off Spotlight indexing for each local volume
-local_volumes=$(df | grep '^/' | awk '{print $9}')
-for volume in $local_volumes; do
-    sudo mdutil -i off "$volume"   # Turn off indexing
-    sudo mdutil -E "$volume"       # Erase and rebuild index if needed
-done
+# Desativar a exibição de tags no menu de contexto (quando você clica com o botão direito em um arquivo)
+defaults write com.apple.finder ShowTagsInContextualMenu -bool false
 
-# Step 3: Restart Finder to apply the changes
+# Desativar a sincronização de tags entre dispositivos (se você estiver usando iCloud Drive)
+defaults write NSGlobalDomain NSDocumentAsynchronousKeyValueStore -bool false
+
+# Reiniciar o Finder para aplicar as mudanças
 killall Finder
-
-# Verification
-sleep 1
-current_setting=$(defaults read com.apple.finder ShowRecentTags 2>/dev/null)
-if [ "$current_setting" == "0" ]; then
-    echo "Finder tags successfully hidden from view."
-else
-    echo "Failed to hide Finder tags. Please check permissions."
-fi
-
-# Check if Spotlight indexing for tags is off on the main volume
-if ! mdutil -s / | grep -q "Indexing enabled"; then
-    echo "Spotlight indexing for tags is disabled."
-else
-    echo "Spotlight indexing for tags is still active. You may need to disable it manually."
-fi
 
 echo "Finder Tags have been disabled."
 
@@ -457,15 +332,6 @@ sudo defaults write com.apple.dock show-recents -bool false
 
 # Step 2: Restart the Dock to apply changes immediately
 killall Dock
-
-# Verification
-sleep 1
-current_setting=$(defaults read com.apple.dock show-recents 2>/dev/null)
-if [ "$current_setting" == "0" ]; then
-    echo "Recent Apps in Dock successfully disabled."
-else
-    echo "Failed to disable Recent Apps in Dock. Please check permissions."
-fi
 
 echo "Recent Apps in Dock have been disabled."
 
@@ -507,14 +373,6 @@ sudo defaults write com.apple.SoftwareUpdate ScheduleFrequency -int 30
 # Step 2: Attempt a cache reduction to decrease the footprint of cfprefsd
 sudo defaults write com.apple.cfprefsd ReduceDaemonActivity -bool true
 
-# Step 3: Verification
-sleep 1
-if [[ $(defaults read -g NSQuitAlwaysKeepsWindows 2>/dev/null) == "0" ]]; then
-    echo "cfprefsd activity reduced successfully."
-else
-    echo "Failed to apply changes to cfprefsd preferences. Please check permissions."
-fi
-
 echo "cfprefsd adjustments complete."
 
 
@@ -523,20 +381,8 @@ echo "cfprefsd adjustments complete."
 # The CrashReporter reports application crashes and sends information to Apple. Disabling it can save disk space and reduce resource usage.
 echo "Disabling CrashReporter..."
 
-# Step 1: Disable CrashReporter dialog pop-up
+# Disable CrashReporter dialog pop-up
 sudo defaults write com.apple.CrashReporter DialogType none
-
-# Step 2: Unload the CrashReporter service to fully disable it
-# sudo launchctl unload -w /System/Library/LaunchAgents/com.apple.CrashReporter.plist
-# LaunchAgents são geralmente executados no contexto de usuário, execute o comando sem sudo
-# sudo find / -name "com.apple.CrashReporter.plist"
-
-
-sudo launchctl bootstrap system /System/Library/LaunchDaemons/com.apple.CrashReporterSupportHelper.plist
-sudo launchctl bootout system /System/Library/LaunchDaemons/com.apple.CrashReporterSupportHelper.plist
-
-launchctl bootstrap system /System/Library/LaunchAgents/com.apple.ReportCrash.plist
-launchctl bootout system /System/Library/LaunchAgents/com.apple.ReportCrash.plist
 
 # Verification
 sleep 1
@@ -576,6 +422,8 @@ echo "File descriptor limit adjustment complete."
 echo "Disabling Sudden Motion Sensor (SMS)..."
 
 sudo pmset -a sms 0
+sudo pmset -a hibernatemode 0
+sudo pmset -a autopoweroff 0
 
 echo "Sudden Motion Sensor (SMS) has been disabled."
 
@@ -659,6 +507,13 @@ echo "Disabling File Quarantine for Downloaded Files..."
 
 # Disable the quarantine flag by modifying LaunchServices
 sudo defaults write com.apple.LaunchServices LSQuarantine -bool false
+defaults write com.apple.LaunchServices LSQuarantine -bool false
+
+# Disable the quarantine alert by modifying LaunchServices
+sudo defaults write com.apple.LaunchServices LSQuarantineAlert -bool false
+
+# Remove any existing quarantine flags for downloaded files
+sudo find /var/db/SystemPolicy -name '*.db' -delete
 
 # Verification
 sleep 1
@@ -687,137 +542,98 @@ echo "LaunchServices Database reset successfully."
 
 
 
-# Disable Universal Access Services
+
 # Disables accessibility services in macOS, such as visual and media accessibility, which can reduce memory and CPU usage
-# if these services are not required.
 echo "Disabling Universal Access Services..."
 
-# Disable and unload relevant accessibility services
-launchctl bootout gui/$(id -u) /System/Library/LaunchAgents/com.apple.universalaccessd.plist
-launchctl bootout gui/$(id -u) /System/Library/LaunchAgents/com.apple.accessibility.AXVisualSupportAgent.plist
-launchctl bootout gui/$(id -u) /System/Library/LaunchAgents/com.apple.accessibility.mediaaccessibilityd.plist
+# Additional step for aggressive disabling (optional):
+# Disable accessibility settings that could still be active in the background
+defaults write com.apple.universalaccess reduceMotion -bool true
+defaults write com.apple.universalaccess reduceTransparency -bool true
 
-# Verification step: Check if services are inactive
-sleep 1
-if ! launchctl list | grep -q "com.apple.universalaccessd"; then
-    echo "Universal Access Services successfully disabled."
-else
-    echo "Failed to disable Universal Access Services. Please check permissions or try again."
-fi
+# Restart services to ensure changes take effect (optional)
+sudo killall Finder
+sudo killall SystemUIServer
 
-
-
-# Disable Game Center
-# Game Center is a macOS service that allows players to share game scores and achievements with friends.
-# Disabling it can reduce CPU and memory usage, especially if Game Center features are unused.
-echo "Disabling Game Center..."
-
-sudo launchctl bootout gui/$(id -u) /System/Library/LaunchAgents/com.apple.gamed.plist
-
-# Verification step: Check if Game Center is inactive
-sleep 1
-if ! launchctl list | grep -q "com.apple.gamed"; then
-    echo "Game Center successfully disabled."
-else
-    echo "Failed to disable Game Center. Please check permissions or try again."
-fi
 
 
 
 echo "Disabling Analytics and Data Collection Service..."
 
 # Disable system analytics and diagnostic reports if not already disabled
-if [[ $(sudo defaults read /Library/Application\ Support/CrashReporter/DiagnosticMessagesHistory.plist AutoSubmit 2>/dev/null) != "0" ]]; then
-    sudo defaults write /Library/Application\ Support/CrashReporter/DiagnosticMessagesHistory.plist AutoSubmit -bool false
-fi
-
-if [[ $(sudo defaults read /Library/Application\ Support/CrashReporter/DiagnosticMessagesHistory.plist ThirdPartyDataSubmit 2>/dev/null) != "0" ]]; then
-    sudo defaults write /Library/Application\ Support/CrashReporter/DiagnosticMessagesHistory.plist ThirdPartyDataSubmit -bool false
-fi
-
-sudo defaults write /Library/Preferences/com.apple.CrashReporter.plist DialogType none
-sudo defaults write com.apple.UsageStats.plist Enable -bool false
 sudo defaults write com.apple.CrashReporter DialogType none
-
+sudo defaults write com.apple.CrashReporter UseCrashReporter -bool false
+sudo defaults write com.apple.usage_stats AllowSubmission -bool false
 
 # Disable analytics for individual users if not already disabled
 if [[ $(sudo defaults read com.apple.SubmitDiagInfo AutoSubmit 2>/dev/null) != "0" ]]; then
     sudo defaults write com.apple.SubmitDiagInfo AutoSubmit -bool false
-    sudo defaults write /Library/Preferences/com.apple.SubmitDiagInfo.plist AutoSubmit -bool false
 fi
     
 if [[ $(sudo defaults read com.apple.SubmitDiagInfo ThirdPartyDataSubmit 2>/dev/null) != "0" ]]; then
     sudo defaults write com.apple.SubmitDiagInfo ThirdPartyDataSubmit -bool false
-    sudo defaults write /Library/Preferences/com.apple.SubmitDiagInfo.plist ThirdPartyDataSubmit -bool false
 fi
 
+
 # Unload analytics and diagnostic services if they are currently loaded
-declare -a services_backup=(
-    "/System/Library/LaunchDaemons/com.apple.spindump.plist"
-    "/System/Library/LaunchDaemons/com.apple.crashreporterd.plist"
-    "/System/Library/LaunchDaemons/com.apple.syslogd.plist"
-    "/System/Library/LaunchDaemons/com.apple.aslmanager.plist"
-    "/System/Library/LaunchDaemons/com.apple.diagnosticd.plist"
-    "/System/Library/LaunchDaemons/com.apple.analyticsd.plist"
-    "/System/Library/LaunchAgents/com.apple.amp.mediasharingd.plist"
-    "/System/Library/LaunchAgents/com.apple.screensharing.plist"
-    "/System/Library/LaunchAgents/com.apple.usagestats.plist"
-    "/System/Library/LaunchDaemons/com.apple.ReportCrash.Root.plist"
-    "/System/Library/LaunchDaemons/com.apple.ReportCrash.SafetyNet.plist"
-    "/System/Library/LaunchDaemons/com.apple.ReportPanic.plist"
-    "/System/Library/LaunchDaemons/com.apple.ReportMemoryException.plist"
-    "/System/Library/LaunchDaemons/com.apple.ReportSystemCrash.plist"
-    "/System/Library/LaunchDaemons/com.apple.watchdogd.plist" # Gerenciamento de falhas do sistema
-    "/System/Library/LaunchAgents/com.apple.ReportCrash.plist"
-    "/System/Library/LaunchAgents/com.apple.ReportPanic.plist"
-    "/System/Library/LaunchDaemons/com.apple.logd.plist"  # Central logging service
-    "/System/Library/LaunchDaemons/com.apple.dtrace.plist" # DTrace monitoring service
-    "/System/Library/LaunchDaemons/com.apple.ActivityMonitor.plist" # Monitoramento de atividade do sistema
-    # "/System/Library/LaunchDaemons/com.apple.sysmond.plist" # System monitoring daemon
-)
-
 declare -a services=(
-    # Diagnostic and Crash Reporting Services
-    "system/com.apple.spindump"
-    "system/com.apple.crashreporterd"
-    "system/com.apple.diagnosticd"
-    "system/com.apple.ReportCrash.Root"
-    "system/com.apple.ReportCrash.SafetyNet"
-    "system/com.apple.ReportPanic"
-    "system/com.apple.ReportMemoryException"
-    "system/com.apple.ReportSystemCrash"
-    "system/com.apple.watchdogd"
-    "user/com.apple.ReportCrash"
-    "user/com.apple.ReportPanic"
-
-    # Logging Services
-    "system/com.apple.syslogd"
-    "system/com.apple.aslmanager"
-    "system/com.apple.logd"
-
-    # Analytics and Usage Statistics
-    "system/com.apple.analyticsd"
-    "system/com.apple.usagestats"
-
-    # Media Sharing and Screen Sharing Services (usuários podem não precisar)
-    "user/com.apple.amp.mediasharingd"
-    "user/com.apple.screensharing"
-    
-    # DTrace and Performance Monitoring
-    "system/com.apple.dtrace"
-    "system/com.apple.ActivityMonitor"
+    "com.apple.CrashReporterSupportHelper"
+    "com.apple.emond.aslmanager"
+    "com.apple.logd_helper"
+    "com.apple.memoryanalyticsd"
+    "com.apple.wifianalyticsd"
+    "com.apple.ActivityMonitor"
+    "com.apple.analyticsd"
+    "com.apple.appleseed.seedusaged"
+    "com.apple.appleseed.fbahelperd"
+    "com.apple.feedback.relay"
+    "com.apple.feedback.reporter"
+    "com.apple.Siri"
+    "com.apple.speech.speechsynthesisd"
+    "com.apple.voiceservicesd"
+    "com.apple.assistantd"
+    "com.apple.SiriAnalytics"
+    "com.apple.universalaccessd"
+    "com.apple.accessibility.AXVisualSupportAgent"
+    "com.apple.accessibility.mediaaccessibilityd"
+    "com.apple.gamed"
+    "com.apple.aslmanager"
+    "com.apple.crashreporterd"
+    "com.apple.diagnosticd"
+    "com.apple.dtrace"
+    "com.apple.logd"
+    "com.apple.metadata.mds"
+    "com.apple.ReportCrash.Root"
+    "com.apple.ReportCrash.SafetyNet"
+    "com.apple.ReportMemoryException"
+    "com.apple.ReportPanic"
+    "com.apple.ReportSystemCrash"
+    "com.apple.spindump"
+    "com.apple.syslogd"
+    "com.apple.systemstats.analysis"
+    "com.apple.systemstats.daily"
+    "com.apple.systemstats.microstackshot_periodic"
+    "com.apple.usagestats"
+    "com.apple.watchdogd"
+    "com.apple.ReportCrash"
+    "com.apple.ReportPanic"
 )
-
 
 for service in "${services[@]}"; do
-    if sudo launchctl list | grep -q "$(basename "$service" .plist)"; then
-        sudo launchctl stop "$service"
-        sudo launchctl disable -w "$service"
-        echo "Disable $service"
+    if launchctl list | grep -q "$service"; then
+        launchctl bootout "$service" 2>/dev/null && echo "Booted out $service" || echo "Failed to boot out $service"
     else
-        echo "$service is already disabled or not running."
+        echo "$service is not currently loaded, skipping bootout."
+    fi
+
+    if launchctl disable "$service" 2>/dev/null; then
+        echo "Disabled $service permanently"
+    else
+        echo "Could not disable $service permanently"
     fi
 done
+
+# sudo launchctl print system
 
 # Final message
 echo "Analytics and Data Collection services have been disabled. A restart may be required for all changes to take full effect."
@@ -845,8 +661,6 @@ fi
 
 # Lista de domínios para bloquear
 telemetryDomains="
-
-#Microsoft Telemetry and Ads
 127.0.0.1    activity.windows.com
 127.0.0.1    ads.msn.com
 127.0.0.1    analytics.microsoft.com
@@ -876,8 +690,6 @@ telemetryDomains="
 127.0.0.1    vortex.data.microsoft.com
 127.0.0.1    vortex-win.data.microsoft.com
 127.0.0.1    watson.microsoft.com
-
-#Apple Telemetry
 127.0.0.1    analytics.apple.com
 127.0.0.1    api-glb-crashlytics.itunes.apple.com
 127.0.0.1    config.push.apple.com
@@ -893,8 +705,6 @@ telemetryDomains="
 127.0.0.1    radarsubmissions.apple.com
 127.0.0.1    sp.analytics.itunes.apple.com
 127.0.0.1    telemetry.apple.com
-
-#Google Ads and Telemetry
 127.0.0.1    ad.doubleclick.net
 127.0.0.1    ads.google.com
 127.0.0.1    adservice.google.co.in
@@ -920,8 +730,6 @@ telemetryDomains="
 127.0.0.1    tagmanager.google.com
 127.0.0.1    tags.tiqcdn.com
 127.0.0.1    www.google-analytics.com
-
-#Facebook Ads and Tracking
 127.0.0.1    adaccount.instagram.com
 127.0.0.1    ads.facebook.com
 127.0.0.1    connect.facebook.net
@@ -932,8 +740,6 @@ telemetryDomains="
 127.0.0.1    pixel.facebook.com
 127.0.0.1    tr.facebook.com
 127.0.0.1    tracking.facebook.com
-
-#Mozilla Telemetry
 127.0.0.1    blocklists.settings.services.mozilla.com
 127.0.0.1    crash-stats.mozilla.com
 127.0.0.1    data.mozilla.com
@@ -941,8 +747,6 @@ telemetryDomains="
 127.0.0.1    incoming.telemetry.mozilla.org
 127.0.0.1    shavar.services.mozilla.com
 127.0.0.1    telemetry.mozilla.org
-
-#General Ads and Telemetry
 127.0.0.1    ads.linkedin.com
 127.0.0.1    ads.pinterest.com
 127.0.0.1    ads.twitter.com
@@ -974,12 +778,7 @@ telemetryDomains="
 127.0.0.1    tags.tiqcdn.com
 127.0.0.1    tracking-proxy-prod.msn.com
 127.0.0.1    yieldmanager.com
-
-#onedrive EOL workaround
 127.0.0.1    oneclient.sfx.ms
-# 127.0.0.1    g.live.com
-
-#End of list of domains to block
 "
 
 # Verifica e adiciona domínios apenas se não existirem no arquivo
