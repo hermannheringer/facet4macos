@@ -243,7 +243,7 @@ Most settings can be reverted by adjusting the values in `defaults write` comman
 
 ## Compatibility
 
-This script is tailored for macOS versions prior to Ventura (macOS 12), where certain services like Dashboard and various system daemons are accessible. Some commands may not be fully compatible with newer macOS releases, and behavior may vary across system versions.
+This script is tailored for macOS versions prior to Ventura (macOS 13), where certain services like Dashboard and various system daemons are accessible. Some commands may not be fully compatible with newer macOS releases, and behavior may vary across system versions.
 
 ---
 
