@@ -3,7 +3,7 @@
 
 # Facet4 macOS Configuration Script
 # Author: Hermann Heringer
-# Version : 0.3
+# Version : 0.4
 # Source: https://github.com/hermannheringer/
 
 
@@ -42,7 +42,7 @@ if sysctl -n machdep.cpu.brand_string | grep -q "Intel"; then
         echo "Performance Mode is already enabled."
     else
         # Ativa o modo de desempenho sem remover outros argumentos já definidos
-        sudo nvram boot-args="serverperfmode=1 ${current_args#boot-args=}"
+        nvram boot-args="serverperfmode=1 ${current_args#boot-args=}"
         echo "Performance Mode has been enabled for Intel-based macOS."
     fi
 
@@ -65,7 +65,7 @@ fi
 echo "Disabling Application Nap..."
 
 # Step 1: Disable Application Nap globally
-sudo defaults write NSGlobalDomain NSAppSleepDisabled -bool true
+defaults write NSGlobalDomain NSAppSleepDisabled -bool true
 
 # Step 2: Confirm that Application Nap is disabled
 sleep 1
@@ -80,7 +80,7 @@ fi
 # Step 3: Reload affected services to apply changes (if necessary)
 # Restart SystemUIServer to ensure that global settings take effect immediately
 # launchctl kickstart -k system/com.apple.SystemUIServer
-sudo killall SystemUIServer
+killall SystemUIServer
 
 echo "Application Nap setting updated. Please verify changes if needed."
 
@@ -92,7 +92,7 @@ echo "Application Nap setting updated. Please verify changes if needed."
 echo "Disabling Spotlight indexing and metadata services..."
 
 # Attempt to disable Spotlight indexing across all volumes
-if sudo mdutil -a -i off; then
+if mdutil -a -i off; then
     echo "Spotlight indexing disabled on all volumes."
 else
     echo "Failed to disable Spotlight indexing on some volumes. Please check permissions or the state of the volumes."
@@ -100,13 +100,24 @@ fi
 
 # Attempt to clear existing Spotlight index to free up disk space
 # This is optional but can reduce disk usage if indexing is not needed
-if sudo mdutil -a -E; then
+if mdutil -a -E; then
     echo "Existing Spotlight index cleared."
 else
     echo "Failed to clear existing Spotlight index. Please check permissions."
 fi
 
-echo "Spotlight indexing and metadata services are now disabled."
+# Disable the Spotlight menu bar icon
+defaults write com.apple.Spotlight menuBarIconVisible -bool false
+
+# Disable the Spotlight indexing and metadata services
+defaults write com.apple.Spotlight disabled -bool true
+
+launchctl bootout "com.apple.metadata.mds"
+launchctl disable "com.apple.metadata.mds"
+launchctl remove system/"com.apple.metadata.mds"
+
+# You can check the status of the indexing and metadata services using the following commands:
+log show --predicate 'subsystem == "com.apple.metadata.mds"' | grep -i spotlight
 
 
 
@@ -129,9 +140,9 @@ defaults -currentHost write com.apple.universalaccess reduceMotion -bool true
 defaults -currentHost write com.apple.universalaccess reduceTransparency -bool true
 
 # Step 4: Restart services to ensure settings take effect
-# Note: You might need sudo for these if the services are not owned by the current user
-sudo killall Dock
-sudo killall SystemUIServer
+# Note: You might need for these if the services are not owned by the current user
+killall Dock
+killall SystemUIServer
 
 
 
@@ -142,8 +153,8 @@ defaults write com.apple.feedbackassistant showFeedbackAssistant -bool false
 
 # Restart services that might be affected by these changes
 # This step is optional and meant for immediate effect; a system restart would also work
-sudo killall Finder
-sudo killall SystemUIServer
+killall Finder
+killall SystemUIServer
 
 echo "Feedback Assistant processing completed."
 
@@ -153,7 +164,7 @@ echo "Feedback Assistant processing completed."
 echo "Disabling Dashboard..."
 
 # Step 1: Disable Dashboard using defaults (only effective on macOS Mojave and earlier)
-sudo defaults write com.apple.dashboard mcx-disabled -bool true
+defaults write com.apple.dashboard mcx-disabled -bool true
 
 # Step 2: Verification to confirm setting is applied
 current_setting=$(defaults read com.apple.dashboard mcx-disabled 2>/dev/null)
@@ -186,7 +197,7 @@ unload_service() {
     # Check if the service is loaded before trying to unload it
     if check_service_status "$service"; then
         # Attempt to unload the service
-        if sudo launchctl bootout system "$service"; then
+        if launchctl bootout system "$service"; then
             echo "$service successfully disabled."
         else
             echo "Failed to disable $service. It may require further permissions."
@@ -201,18 +212,18 @@ unload_service "/System/Library/LaunchAgents/com.apple.mail.plist"
 unload_service "/System/Library/LaunchDaemons/com.apple.mailfetchd.plist"
 
 # Step 2: Disable inline attachment viewing in Mail
-sudo defaults write com.apple.mail DisableInlineAttachmentViewing -bool true
+defaults write com.apple.mail DisableInlineAttachmentViewing -bool true
 
 # Step 3: Disable Spotlight indexing for Mail
 # Adds Mail to the Spotlight exclusion list
-if sudo mdutil -i off /System/Applications/Mail.app; then
+if mdutil -i off /System/Applications/Mail.app; then
     echo "Spotlight indexing for Mail is disabled."
 else
     echo "Failed to disable Spotlight indexing for Mail. Please check permissions."
 fi
 
 # Clear existing Spotlight index for Mail (optional)
-if sudo mdutil -E /System/Applications/Mail.app; then
+if mdutil -E /System/Applications/Mail.app; then
     echo "Existing Spotlight index for Mail cleared."
 else
     echo "Failed to clear Spotlight index for Mail."
@@ -220,7 +231,7 @@ fi
 
 # Step 4: Verification to ensure settings are applied
 sleep 1
-current_setting=$(sudo defaults read com.apple.mail DisableInlineAttachmentViewing 2>/dev/null)
+current_setting=$(defaults read com.apple.mail DisableInlineAttachmentViewing 2>/dev/null)
 if [ "$current_setting" == "1" ]; then
     echo "Mail inline attachment viewing successfully disabled."
 else
@@ -228,7 +239,7 @@ else
 fi
 
 # Check if Spotlight indexing for Mail is off
-mail_indexing_status=$(sudo mdutil -s /System/Applications/Mail.app | grep "Indexing disabled")
+mail_indexing_status=$(mdutil -s /System/Applications/Mail.app | grep "Indexing disabled")
 if [ -n "$mail_indexing_status" ]; then
     echo "Spotlight indexing for Mail is disabled."
 else
@@ -251,7 +262,7 @@ else
     echo "Time Machine is currently enabled. Disabling..."
 
     # Step 2: Disable Time Machine automatic backups
-    if sudo tmutil disable; then
+    if tmutil disable; then
         echo "Time Machine automatic backups successfully disabled."
     else
         echo "Failed to disable Time Machine automatic backups."
@@ -262,7 +273,7 @@ else
         echo "Time Machine backup daemon is currently running. Attempting to stop..."
 
         # Force stop the daemon
-        if sudo killall backupd; then
+        if killall backupd; then
             echo "Time Machine backup daemon forcefully stopped."
         else
             echo "Failed to force stop Time Machine backup daemon. It may not be running."
@@ -284,19 +295,33 @@ echo "Time Machine auto-backup has been disabled."
 
 
 echo "Disabling Siri & Voice Services..."
+
+# Disable Siri
+defaults write com.apple.Siri Enable -bool false
+
 # Disable Siri visibility in the menu bar
 defaults write com.apple.Siri StatusMenuVisible -bool false
 
 # Set that the user has declined to enable Siri
 defaults write com.apple.Siri UserHasDeclinedEnable -bool true
 
-# Disable the Assistant
-defaults write com.apple.assistant.support "Assistant Enabled" -bool false
+# Disable the Speech Recognition system
+defaults write com.apple.speech.recognition "SpeechRecognitionEnabled" -bool false
+
+# Disable the Dictation system
+defaults write NSGlobalDomain DictationIM -bool false
+defaults write com.apple.assistant.dictation DictationIM -bool false
+
+# Disable VoiceOver
+defaults write com.apple.universalaccess com.apple.AccessibilityVoiceOverEnabled -bool false
+
+# Disable the Speech Synthesis voice
+defaults write com.apple.universalaccess "com.apple.speech.synthesis.voiceover" -bool false
 
 # Restart services that might be affected by these changes
-# This step is optional and meant for immediate effect; a system restart would also work
-sudo killall Finder
-sudo killall SystemUIServer
+
+killall Finder
+killall SystemUIServer
 
 echo "Siri and Voice Services processing complete."
 
@@ -328,7 +353,7 @@ echo "Finder Tags have been disabled."
 echo "Disabling Recent Apps in Dock..."
 
 # Step 1: Disable the "Recent Apps" feature in the Dock
-sudo defaults write com.apple.dock show-recents -bool false
+defaults write com.apple.dock show-recents -bool false
 
 # Step 2: Restart the Dock to apply changes immediately
 killall Dock
@@ -342,7 +367,7 @@ echo "Recent Apps in Dock have been disabled."
 echo "Disabling Desktop Stacks..."
 
 # Step 1: Disable the "Use Stacks" feature on the Desktop
-sudo defaults write com.apple.finder UseStacks -bool false
+defaults write com.apple.finder UseStacks -bool false
 
 # Step 2: Restart Finder to apply changes immediately
 killall Finder
@@ -365,13 +390,13 @@ echo "Limiting cfprefsd memory usage..."
 
 # Step 1: Adjust caching settings to reduce plist write frequency, indirectly managing cfprefsd activity
 # This will prevent system and app windows from being restored automatically, potentially reducing cached data load
-sudo defaults write -g NSQuitAlwaysKeepsWindows -bool false
+defaults write -g NSQuitAlwaysKeepsWindows -bool false
 
 # Optional (if applicable): Reduce frequency of system updates check, which can also decrease plist activity
-sudo defaults write com.apple.SoftwareUpdate ScheduleFrequency -int 30
+defaults write com.apple.SoftwareUpdate ScheduleFrequency -int 30
 
 # Step 2: Attempt a cache reduction to decrease the footprint of cfprefsd
-sudo defaults write com.apple.cfprefsd ReduceDaemonActivity -bool true
+defaults write com.apple.cfprefsd ReduceDaemonActivity -bool true
 
 echo "cfprefsd adjustments complete."
 
@@ -382,7 +407,7 @@ echo "cfprefsd adjustments complete."
 echo "Disabling CrashReporter..."
 
 # Disable CrashReporter dialog pop-up
-sudo defaults write com.apple.CrashReporter DialogType none
+defaults write com.apple.CrashReporter DialogType none
 
 # Verification
 sleep 1
@@ -421,9 +446,9 @@ echo "File descriptor limit adjustment complete."
 # SMS detects sudden movements to protect hard drives. Disabling it can save resources, especially on SSD-based systems.
 echo "Disabling Sudden Motion Sensor (SMS)..."
 
-sudo pmset -a sms 0
-sudo pmset -a hibernatemode 0
-sudo pmset -a autopoweroff 0
+pmset -a sms 0
+pmset -a hibernatemode 0
+pmset -a autopoweroff 0
 
 echo "Sudden Motion Sensor (SMS) has been disabled."
 
@@ -434,11 +459,11 @@ echo "Sudden Motion Sensor (SMS) has been disabled."
 echo "Adjusting TCP KeepAlive..."
 
 # Step 1: Set TCP KeepAlive temporarily
-sudo sysctl -w net.inet.tcp.always_keepalive=0
+sysctl -w net.inet.tcp.always_keepalive=0
 
 # Step 2: Make the change persistent by adding it to /etc/sysctl.conf
 if ! grep -q "net.inet.tcp.always_keepalive=0" /etc/sysctl.conf 2>/dev/null; then
-    echo "net.inet.tcp.always_keepalive=0" | sudo tee -a /etc/sysctl.conf > /dev/null
+    echo "net.inet.tcp.always_keepalive=0" | tee -a /etc/sysctl.conf > /dev/null
     echo "TCP KeepAlive setting added to /etc/sysctl.conf for persistence."
 else
     echo "TCP KeepAlive setting already present in /etc/sysctl.conf."
@@ -462,15 +487,15 @@ echo "TCP KeepAlive adjustment complete."
 echo "Adjusting network buffer..."
 
 # Step 1: Set network buffer size temporarily
-sudo sysctl -w net.inet.tcp.recvspace=65536
-sudo sysctl -w net.inet.tcp.sendspace=65536
+sysctl -w net.inet.tcp.recvspace=65536
+sysctl -w net.inet.tcp.sendspace=65536
 
 # Step 2: Make the change persistent by adding it to /etc/sysctl.conf
 if ! grep -q "net.inet.tcp.recvspace=65536" /etc/sysctl.conf 2>/dev/null; then
-    echo "net.inet.tcp.recvspace=65536" | sudo tee -a /etc/sysctl.conf > /dev/null
+    echo "net.inet.tcp.recvspace=65536" | tee -a /etc/sysctl.conf > /dev/null
 fi
 if ! grep -q "net.inet.tcp.sendspace=65536" /etc/sysctl.conf 2>/dev/null; then
-    echo "net.inet.tcp.sendspace=65536" | sudo tee -a /etc/sysctl.conf > /dev/null
+    echo "net.inet.tcp.sendspace=65536" | tee -a /etc/sysctl.conf > /dev/null
     echo "Network buffer settings added to /etc/sysctl.conf for persistence."
 else
     echo "Network buffer settings already present in /etc/sysctl.conf."
@@ -495,7 +520,7 @@ echo "Network buffer adjustment complete."
 # Flushing the dscacheutil cache can help manage space and free up memory for other processes.
 echo "Flushing dscacheutil cache..."
 
-sudo dscacheutil -flushcache
+dscacheutil -flushcache
 echo "dscacheutil cache flushed."
 
 
@@ -506,14 +531,14 @@ echo "dscacheutil cache flushed."
 echo "Disabling File Quarantine for Downloaded Files..."
 
 # Disable the quarantine flag by modifying LaunchServices
-sudo defaults write com.apple.LaunchServices LSQuarantine -bool false
+defaults write com.apple.LaunchServices LSQuarantine -bool false
 defaults write com.apple.LaunchServices LSQuarantine -bool false
 
 # Disable the quarantine alert by modifying LaunchServices
-sudo defaults write com.apple.LaunchServices LSQuarantineAlert -bool false
+defaults write com.apple.LaunchServices LSQuarantineAlert -bool false
 
 # Remove any existing quarantine flags for downloaded files
-sudo find /var/db/SystemPolicy -name '*.db' -delete
+find /var/db/SystemPolicy -name '*.db' -delete
 
 # Verification
 sleep 1
@@ -533,7 +558,7 @@ fi
 echo "Resetting LaunchServices Database..."
 
 # Reset LaunchServices database by removing file associations and rebuilding
-sudo /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -kill -r -domain local -domain system -domain user
+/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -kill -r -domain local -domain system -domain user
 
 # Verification step (optional): Check if the reset improved performance in file associations
 sleep 1
@@ -543,94 +568,214 @@ echo "LaunchServices Database reset successfully."
 
 
 
-# Disables accessibility services in macOS, such as visual and media accessibility, which can reduce memory and CPU usage
-echo "Disabling Universal Access Services..."
-
-# Additional step for aggressive disabling (optional):
-# Disable accessibility settings that could still be active in the background
-defaults write com.apple.universalaccess reduceMotion -bool true
-defaults write com.apple.universalaccess reduceTransparency -bool true
-
-# Restart services to ensure changes take effect (optional)
-sudo killall Finder
-sudo killall SystemUIServer
-
-
 
 
 echo "Disabling Analytics and Data Collection Service..."
 
 # Disable system analytics and diagnostic reports if not already disabled
-sudo defaults write com.apple.CrashReporter DialogType none
-sudo defaults write com.apple.CrashReporter UseCrashReporter -bool false
-sudo defaults write com.apple.usage_stats AllowSubmission -bool false
+defaults write com.apple.CrashReporter DialogType none
+defaults write com.apple.CrashReporter UseCrashReporter -bool false
+defaults write com.apple.usage_stats AllowSubmission -bool false
 
 # Disable analytics for individual users if not already disabled
-if [[ $(sudo defaults read com.apple.SubmitDiagInfo AutoSubmit 2>/dev/null) != "0" ]]; then
-    sudo defaults write com.apple.SubmitDiagInfo AutoSubmit -bool false
+if [[ $(defaults read com.apple.SubmitDiagInfo AutoSubmit 2>/dev/null) != "0" ]]; then
+    defaults write com.apple.SubmitDiagInfo AutoSubmit -bool false
 fi
     
-if [[ $(sudo defaults read com.apple.SubmitDiagInfo ThirdPartyDataSubmit 2>/dev/null) != "0" ]]; then
-    sudo defaults write com.apple.SubmitDiagInfo ThirdPartyDataSubmit -bool false
+if [[ $(defaults read com.apple.SubmitDiagInfo ThirdPartyDataSubmit 2>/dev/null) != "0" ]]; then
+    defaults write com.apple.SubmitDiagInfo ThirdPartyDataSubmit -bool false
 fi
+
+
+# Analytics and Diagnostics
+    # com.apple.analyticsd
+    # com.apple.crashreporterd
+    # com.apple.CrashReporterSupportHelper
+    # com.apple.diagnosticd
+    # com.apple.dtrace
+    # com.apple.emond.aslmanager
+    # com.apple.logd
+    # com.apple.logd_helper
+    # com.apple.aslmanager
+    # com.apple.memoryanalyticsd
+    # com.apple.spindump_agent
+    # com.apple.ReportGPURestart
+    # com.apple.ReportCrash
+    # com.apple.ReportCrash.Root
+    # com.apple.ReportCrash.SafetyNet
+    # com.apple.ReportMemoryException
+    # com.apple.ReportPanic
+    # com.apple.ReportSystemCrash
+    # com.apple.spindump
+    # com.apple.SubmitDiagInfo
+    # com.apple.syslogd
+    # com.apple.systemstats.analysis
+    # com.apple.systemstats.daily
+    # com.apple.systemstats.microstackshot_periodic
+    # com.apple.usagestats
+    # com.apple.watchdogd
+
+# Siri and Speech
+    # com.apple.Siri
+    # com.apple.Siri.agent
+    # com.apple.parsec-fbf
+    # com.apple.siriknowledged
+    # com.apple.speech.speechsynthesisd
+    # com.apple.speech.synthesisserver
+    # com.apple.speech.recognitionserver
+    # com.apple.speech.feedbackservicesserver
+    # com.apple.speech.voiceinstallerd
+    # com.apple.speech.speechdatainstallerd
+    # com.apple.DictationIM
+    # com.apple.assistantd
+    # com.apple.assistant_service
+    # com.apple.SiriAnalytics
+    # com.apple.voiceservicesd
+
+# Accessibility
+    # com.apple.universalaccessd
+    # com.apple.voicememod
+    # com.apple.accessibility.dfrhud
+    # com.apple.accessibility.heard
+    # com.apple.accessibility.AXVisualSupportAgent
+    # com.apple.accessibility.mediaaccessibilityd
+    # com.apple.VoiceOver
+
+# Feedback and Usage
+    # com.apple.appleseed.seedusaged
+    # com.apple.appleseed.seedusaged.postinstall
+    # com.apple.appleseed.fbahelperd
+    # com.apple.feedback.relay
+    # com.apple.feedback.reporter
+    # com.apple.AOSPushRelay
+
+# Network and Sharing
+    # com.apple.parentalcontrols.check
+    # com.apple.familycontrols.useragent
+    # com.apple.screensharing.MessagesAgent
+    # com.apple.screensharing.agent
+    # com.apple.screensharing.menuextra
+
+# Media and Analytics
+    # com.apple.gamed
+    # com.apple.rtcreportingd
+    # com.apple.photoanalysisd
+    # com.apple.mediaanalysisd
+    # com.apple.wifianalyticsd
+
+# Advertising and Privacy
+    # com.apple.ap.adprivacyd
+    # com.apple.ap.adservicesd
+
+# System Services
+    # com.apple.ActivityMonitor
+
+# Miscellaneous
+    # com.apple.touristd
+    # com.apple.KeyboardAccessAgent
+    # com.apple.SocialPushAgent
+    # com.apple.helpd
+    # com.apple.macos.studentd
 
 
 # Unload analytics and diagnostic services if they are currently loaded
 declare -a services=(
-    "com.apple.CrashReporterSupportHelper"
-    "com.apple.emond.aslmanager"
-    "com.apple.logd_helper"
-    "com.apple.memoryanalyticsd"
-    "com.apple.wifianalyticsd"
-    "com.apple.ActivityMonitor"
     "com.apple.analyticsd"
-    "com.apple.appleseed.seedusaged"
-    "com.apple.appleseed.fbahelperd"
-    "com.apple.feedback.relay"
-    "com.apple.feedback.reporter"
-    "com.apple.Siri"
-    "com.apple.speech.speechsynthesisd"
-    "com.apple.voiceservicesd"
-    "com.apple.assistantd"
-    "com.apple.SiriAnalytics"
-    "com.apple.universalaccessd"
-    "com.apple.accessibility.AXVisualSupportAgent"
-    "com.apple.accessibility.mediaaccessibilityd"
-    "com.apple.gamed"
-    "com.apple.aslmanager"
     "com.apple.crashreporterd"
+    "com.apple.CrashReporterSupportHelper"
     "com.apple.diagnosticd"
     "com.apple.dtrace"
+    "com.apple.emond.aslmanager"
     "com.apple.logd"
-    "com.apple.metadata.mds"
+    "com.apple.logd_helper"
+    "com.apple.aslmanager"
+    "com.apple.memoryanalyticsd"
+    "com.apple.spindump_agent"
+    "com.apple.ReportGPURestart"
+    "com.apple.ReportCrash"
     "com.apple.ReportCrash.Root"
     "com.apple.ReportCrash.SafetyNet"
     "com.apple.ReportMemoryException"
     "com.apple.ReportPanic"
     "com.apple.ReportSystemCrash"
     "com.apple.spindump"
+    "com.apple.SubmitDiagInfo"
     "com.apple.syslogd"
     "com.apple.systemstats.analysis"
     "com.apple.systemstats.daily"
     "com.apple.systemstats.microstackshot_periodic"
     "com.apple.usagestats"
     "com.apple.watchdogd"
-    "com.apple.ReportCrash"
-    "com.apple.ReportPanic"
+    "com.apple.Siri"
+    "com.apple.Siri.agent"
+    "com.apple.parsec-fbf"
+    "com.apple.siriknowledged"
+    "com.apple.speech.speechsynthesisd"
+    "com.apple.speech.synthesisserver"
+    "com.apple.speech.recognitionserver"
+    "com.apple.speech.feedbackservicesserver"
+    "com.apple.speech.voiceinstallerd"
+    "com.apple.speech.speechdatainstallerd"
+    "com.apple.DictationIM"
+    "com.apple.assistantd"
+    "com.apple.assistant_service"
+    "com.apple.SiriAnalytics"
+    "com.apple.voiceservicesd"
+    "com.apple.universalaccessd"
+    "com.apple.voicememod"
+    "com.apple.accessibility.dfrhud"
+    "com.apple.accessibility.heard"
+    "com.apple.accessibility.AXVisualSupportAgent"
+    "com.apple.accessibility.mediaaccessibilityd"
+    "com.apple.VoiceOver"
+    "com.apple.appleseed.seedusaged"
+    "com.apple.appleseed.seedusaged.postinstall"
+    "com.apple.appleseed.fbahelperd"
+    "com.apple.feedback.relay"
+    "com.apple.feedback.reporter"
+    "com.apple.AOSPushRelay"
+    "com.apple.parentalcontrols.check"
+    "com.apple.familycontrols.useragent"
+    "com.apple.screensharing.MessagesAgent"
+    "com.apple.screensharing.agent"
+    "com.apple.screensharing.menuextra"
+    "com.apple.gamed"
+    "com.apple.rtcreportingd"
+    "com.apple.photoanalysisd"
+    "com.apple.mediaanalysisd"
+    "com.apple.wifianalyticsd"
+    "com.apple.ap.adprivacyd"
+    "com.apple.ap.adservicesd"
+    "com.apple.ActivityMonitor"
+    "com.apple.touristd"
+    "com.apple.KeyboardAccessAgent"
+    "com.apple.SocialPushAgent"
+    "com.apple.helpd"
+    "com.apple.macos.studentd"
 )
 
 for service in "${services[@]}"; do
-    if launchctl list | grep -q "$service"; then
-        launchctl bootout "$service" 2>/dev/null && echo "Booted out $service" || echo "Failed to boot out $service"
+    # Primeiro, verificamos se o serviço está carregado como um serviço do sistema
+    if launchctl list | grep -q "system/$service"; then
+        launchctl bootout system/"$service" 2>/dev/null && echo "Booted out system/$service" || echo "Failed to boot out system/$service"
+        
+        launchctl disable system/"$service" 2>/dev/null && echo "Disabled system/$service permanently" || echo "Could not disable system/$service permanently"
+        
+        launchctl remove system/"$service" 2>/dev/null && echo "Removed system/$service" || echo "Failed to remove system/$service"
     else
-        echo "$service is not currently loaded, skipping bootout."
+        # Se não for um serviço do sistema, assumimos que é de usuário
+        if launchctl list | grep -q "$service"; then
+            launchctl bootout "$service" 2>/dev/null && echo "Booted out user/$service" || echo "Failed to boot out user/$service"
+            
+            launchctl disable "$service" 2>/dev/null && echo "Disabled user/$service permanently" || echo "Could not disable user/$service permanently"
+            
+            launchctl remove "$service" 2>/dev/null && echo "Removed user/$service" || echo "Failed to remove user/$service"
+        else
+            echo "$service is not currently loaded, skipping operations."
+        fi
     fi
-
-    if launchctl disable "$service" 2>/dev/null; then
-        echo "Disabled $service permanently"
-    else
-        echo "Could not disable $service permanently"
-    fi
+    echo 
+    sleep 1
 done
 
 # sudo launchctl print system
@@ -645,7 +790,7 @@ echo "Analytics and Data Collection services have been disabled. A restart may b
 
 echo "Blocking telemetry and tracking by adding entries to the hosts file on macOS."
 
-sudo chmod 644 /etc/hosts
+chmod 644 /etc/hosts
 
 # Caminho do arquivo hosts e do backup
 hostsPath="/etc/hosts"
@@ -653,7 +798,7 @@ backupPath="/etc/hosts.bak"
 
 # Cria um backup do arquivo hosts, se não existir
 if [ ! -f "$backupPath" ]; then
-    sudo cp "$hostsPath" "$backupPath"
+    cp "$hostsPath" "$backupPath"
     echo "Backup do arquivo hosts criado em $backupPath."
 else
     echo "Backup já existente em $backupPath."
@@ -784,7 +929,7 @@ telemetryDomains="
 # Verifica e adiciona domínios apenas se não existirem no arquivo
 for domain in $(echo "$telemetryDomains" | awk '{print $2}'); do
     if ! grep -q "$domain" "$hostsPath"; then
-        echo "127.0.0.1    $domain" | sudo tee -a "$hostsPath" > /dev/null
+        echo "127.0.0.1    $domain" | tee -a "$hostsPath" > /dev/null
     else
         echo "O domínio $domain já está bloqueado no arquivo hosts."
     fi
@@ -793,8 +938,8 @@ done
 echo "Telemetry and tracking domains have been blocked in the hosts file."
 sleep 1
 
-sudo dscacheutil -flushcache
-sudo killall -HUP mDNSResponder
+dscacheutil -flushcache
+killall -HUP mDNSResponder
 
 
 
@@ -804,7 +949,7 @@ response=$(osascript -e 'tell app "System Events" to display dialog "Would you l
 # Check user response
 if [[ $response == *"button returned:Restart Now"* ]]; then
     echo "Restarting the system..."
-    sudo shutdown -r now
+    shutdown -r now
 else
     echo "You chose to restart later. Please remember to restart your system to apply changes."
 fi

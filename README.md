@@ -112,10 +112,19 @@ The **Facet4 macOS Optimization and Debloat Script** is a tool designed to enhan
 ### 12. Background Service Minimization
    - **Objective**: Optimize System Performance by Disabling Non-Essential macOS Background Services to conserve system resources.
 
-      **Crash Reporting and Diagnostics:**
-      - `com.apple.CrashReporterSupportHelper`
+      **Analytics and Diagnostics:**
+      - `com.apple.analyticsd`
       - `com.apple.crashreporterd`
+      - `com.apple.CrashReporterSupportHelper`
       - `com.apple.diagnosticd`
+      - `com.apple.dtrace`
+      - `com.apple.emond.aslmanager`
+      - `com.apple.logd`
+      - `com.apple.logd_helper`
+      - `com.apple.aslmanager`
+      - `com.apple.memoryanalyticsd`
+      - `com.apple.spindump_agent`
+      - `com.apple.ReportGPURestart`
       - `com.apple.ReportCrash`
       - `com.apple.ReportCrash.Root`
       - `com.apple.ReportCrash.SafetyNet`
@@ -123,44 +132,75 @@ The **Facet4 macOS Optimization and Debloat Script** is a tool designed to enhan
       - `com.apple.ReportPanic`
       - `com.apple.ReportSystemCrash`
       - `com.apple.spindump`
-
-      **System Logs and Analytics:**
-      - `com.apple.emond.aslmanager`
-      - `com.apple.logd`
-      - `com.apple.logd_helper`
-      - `com.apple.analyticsd`
-      - `com.apple.memoryanalyticsd`
+      - `com.apple.SubmitDiagInfo`
       - `com.apple.syslogd`
       - `com.apple.systemstats.analysis`
       - `com.apple.systemstats.daily`
       - `com.apple.systemstats.microstackshot_periodic`
       - `com.apple.usagestats`
-      - `com.apple.wifianalyticsd`
+      - `com.apple.watchdogd`
 
-      **Accessibility and Universal Access:**
-      - `com.apple.universalaccessd`
-      - `com.apple.accessibility.AXVisualSupportAgent`
-      - `com.apple.accessibility.mediaaccessibilityd`
+      **Siri and Speech:**
+      - `com.apple.Siri`
+      - `com.apple.Siri.agent`
+      - `com.apple.parsec-fbf`
+      - `com.apple.siriknowledged`
       - `com.apple.speech.speechsynthesisd`
+      - `com.apple.speech.synthesisserver`
+      - `com.apple.speech.recognitionserver`
+      - `com.apple.speech.feedbackservicesserver`
+      - `com.apple.speech.voiceinstallerd`
+      - `com.apple.speech.speechdatainstallerd`
+      - `com.apple.DictationIM`
+      - `com.apple.assistantd`
+      - `com.apple.assistant_service`
+      - `com.apple.SiriAnalytics`
       - `com.apple.voiceservicesd`
 
-      **Feedback and User Interaction:**
+      **Accessibility:**
+      - `com.apple.universalaccessd`
+      - `com.apple.voicememod`
+      - `com.apple.accessibility.dfrhud`
+      - `com.apple.accessibility.heard`
+      - `com.apple.accessibility.AXVisualSupportAgent`
+      - `com.apple.accessibility.mediaaccessibilityd`
+      - `com.apple.VoiceOver`
+
+      **Feedback and Usage:**
       - `com.apple.appleseed.seedusaged`
+      - `com.apple.appleseed.seedusaged.postinstall`
       - `com.apple.appleseed.fbahelperd`
       - `com.apple.feedback.relay`
       - `com.apple.feedback.reporter`
-      - `com.apple.Siri`
-      - `com.apple.assistantd`
-      - `com.apple.SiriAnalytics`
+      - `com.apple.AOSPushRelay`
 
-      **Game and User Activity Monitoring:**
+      **Network and Sharing:**
+      - `com.apple.parentalcontrols.check`
+      - `com.apple.familycontrols.useragent`
+      - `com.apple.screensharing.MessagesAgent`
+      - `com.apple.screensharing.agent`
+      - `com.apple.screensharing.menuextra`
+
+      **Media and Analytics:**
       - `com.apple.gamed`
+      - `com.apple.rtcreportingd`
+      - `com.apple.photoanalysisd`
+      - `com.apple.mediaanalysisd`
+      - `com.apple.wifianalyticsd`
+
+      **Advertising and Privacy:**
+      - `com.apple.ap.adprivacyd`
+      - `com.apple.ap.adservicesd`
+
+      **System Services:**
       - `com.apple.ActivityMonitor`
 
-      **System Stability and Monitoring:**
-      - `com.apple.aslmanager`
-      - `com.apple.dtrace`
-      - `com.apple.watchdogd`
+      **Miscellaneous:**
+      - `com.apple.touristd`
+      - `com.apple.KeyboardAccessAgent`
+      - `com.apple.SocialPushAgent`
+      - `com.apple.helpd`
+      - `com.apple.macos.studentd`
 
    - **Service Control**: Disables these services via `launchctl` and `defaults write`.
 
