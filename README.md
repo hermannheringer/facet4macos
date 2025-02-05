@@ -2,7 +2,7 @@
 # Facet4 macOS Optimization and Debloat Script
 
 **Author**: Hermann Heringer  
-**Version**: 0.3  
+**Version**: 0.5  
 **Repository**: [GitHub](https://github.com/hermannheringer/)
 
 
@@ -11,6 +11,8 @@
 The **Facet4 macOS Optimization and Debloat Script** is a tool designed to enhance macOS performance through systematic adjustments to system services, UI settings, and network configurations. It is ideal for users seeking to reduce memory and CPU usage, streamline background processes, and optimize system responsiveness. 
 
 ![memory.png](README/memory.png)
+Nice!!!
+
 
 > **Warning**: This script modifies core system configurations and should only be used by advanced users familiar with macOS internals. **Ensure a complete system backup** before proceeding.
 
@@ -57,14 +59,14 @@ The **Facet4 macOS Optimization and Debloat Script** is a tool designed to enhan
 
 ### 2. Application Nap Deactivation
    - **Objective**: Disables Application Nap to prevent throttling of background applications, ensuring consistent multitasking performance.
-   - **Commands**: `sudo defaults write NSGlobalDomain NSAppSleepDisabled -bool true`
+   - **Commands**: `sudo defaults write -g NSAppSleepDisabled -bool true`
    - **Verification**: Confirms value with `defaults read`.
 
 ### 3. Spotlight Indexing and Metadata Optimization
    - **Objective**: Disables Spotlight indexing to reduce disk I/O, especially beneficial for systems with intensive disk usage.
    - **Commands**:
-     - Disable: `mdutil -a -i off`
-     - Clear Index: `mdutil -a -E`
+     - Disable: `mdutil -a -i off` | `mdutil -a -d`
+     - Reset Index: `mdutil -a -E`
 
 ### 4. UI Performance Enhancements (Reduce Motion and Transparency)
    - **Objective**: Reduces visual effects for improved system performance, especially on older hardware.
@@ -74,146 +76,22 @@ The **Facet4 macOS Optimization and Debloat Script** is a tool designed to enhan
 ### 5. Feedback Assistant Deactivation
    - **Objective**: Disables Feedback Assistant to conserve system resources.
    - **Commands**: `defaults write com.apple.feedbackassistant showFeedbackAssistant -bool false`
-   - **Service Control**: Unloads associated services via `launchctl`.
 
-### 6. Dashboard Removal (macOS Mojave and Earlier)
-   - **Objective**: Removes the Dashboard to free up system memory and reduce CPU usage.
-   - **Commands**: `sudo defaults write com.apple.dashboard mcx-disabled -bool true`
-   - **Verification**: Checks configuration status with `defaults read`.
-
-### 7. Mail Indexing and Inline Attachments Management
-   - **Objective**: Reduces CPU load by disabling Mail indexing and inline attachment previews.
-   - **Commands**: Uses `mdutil` to disable indexing and configures attachment settings via `defaults write`.
-
-### 8. Time Machine Auto-Backup Control
+### 6. Time Machine Auto-Backup Control
    - **Objective**: Stops automatic Time Machine backups to prevent unintended disk activity during active use.
    - **Commands**: `tmutil disable`
-   - **Daemon Control**: Halts the `backupd` daemon if it’s active.
 
-### 9. Siri and Voice Service Deactivation
+### 7. Siri and Voice Service Deactivation
    - **Objective**: Disables Siri and related services to reduce background processing.
    - **Commands**: Configures `defaults write` settings to disable Siri.
-   - **Service Control**: Stops Siri-related agents and daemons via `launchctl`.
 
-### 10. Finder Tags and Dock Recent Apps Adjustment
-   - **Objective**: Disables Finder tags and recent apps in the Dock to reduce UI memory usage.
-   - **Commands**:
-     - `defaults write com.apple.finder ShowRecentTags -bool false`
-     - `defaults write com.apple.finder ShowTagsInSidebar -bool false`
-     - `defaults write com.apple.finder ShowTagsInContextualMenu -bool false`
-     - `defaults write NSGlobalDomain NSDocumentAsynchronousKeyValueStore -bool false`
-     
-   - **Restart**: Restarts Finder and Dock to apply settings.
-
-### 11. Network Optimization
-   - **Objective**: Improves network efficiency by modifying TCP KeepAlive and buffer settings.
-   - **Commands**:
-     - TCP KeepAlive: `sysctl -w net.inet.tcp.always_keepalive=0`
-     - Buffer Adjustments: `sysctl -w net.inet.tcp.recvspace=65536`, `sysctl -w net.inet.tcp.sendspace=65536`
-
-### 12. Background Service Minimization
-   - **Objective**: Optimize System Performance by Disabling Non-Essential macOS Background Services to conserve system resources.
-
-      **Analytics and Diagnostics:**
-      - `com.apple.analyticsd`
-      - `com.apple.crashreporterd`
-      - `com.apple.CrashReporterSupportHelper`
-      - `com.apple.diagnosticd`
-      - `com.apple.dtrace`
-      - `com.apple.emond.aslmanager`
-      - `com.apple.logd`
-      - `com.apple.logd_helper`
-      - `com.apple.aslmanager`
-      - `com.apple.memoryanalyticsd`
-      - `com.apple.spindump_agent`
-      - `com.apple.ReportGPURestart`
-      - `com.apple.ReportCrash`
-      - `com.apple.ReportCrash.Root`
-      - `com.apple.ReportCrash.SafetyNet`
-      - `com.apple.ReportMemoryException`
-      - `com.apple.ReportPanic`
-      - `com.apple.ReportSystemCrash`
-      - `com.apple.spindump`
-      - `com.apple.SubmitDiagInfo`
-      - `com.apple.syslogd`
-      - `com.apple.systemstats.analysis`
-      - `com.apple.systemstats.daily`
-      - `com.apple.systemstats.microstackshot_periodic`
-      - `com.apple.usagestats`
-      - `com.apple.watchdogd`
-
-      **Siri and Speech:**
-      - `com.apple.Siri`
-      - `com.apple.Siri.agent`
-      - `com.apple.parsec-fbf`
-      - `com.apple.siriknowledged`
-      - `com.apple.speech.speechsynthesisd`
-      - `com.apple.speech.synthesisserver`
-      - `com.apple.speech.recognitionserver`
-      - `com.apple.speech.feedbackservicesserver`
-      - `com.apple.speech.voiceinstallerd`
-      - `com.apple.speech.speechdatainstallerd`
-      - `com.apple.DictationIM`
-      - `com.apple.assistantd`
-      - `com.apple.assistant_service`
-      - `com.apple.SiriAnalytics`
-      - `com.apple.voiceservicesd`
-
-      **Accessibility:**
-      - `com.apple.universalaccessd`
-      - `com.apple.voicememod`
-      - `com.apple.accessibility.dfrhud`
-      - `com.apple.accessibility.heard`
-      - `com.apple.accessibility.AXVisualSupportAgent`
-      - `com.apple.accessibility.mediaaccessibilityd`
-      - `com.apple.VoiceOver`
-
-      **Feedback and Usage:**
-      - `com.apple.appleseed.seedusaged`
-      - `com.apple.appleseed.seedusaged.postinstall`
-      - `com.apple.appleseed.fbahelperd`
-      - `com.apple.feedback.relay`
-      - `com.apple.feedback.reporter`
-      - `com.apple.AOSPushRelay`
-
-      **Network and Sharing:**
-      - `com.apple.parentalcontrols.check`
-      - `com.apple.familycontrols.useragent`
-      - `com.apple.screensharing.MessagesAgent`
-      - `com.apple.screensharing.agent`
-      - `com.apple.screensharing.menuextra`
-
-      **Media and Analytics:**
-      - `com.apple.gamed`
-      - `com.apple.rtcreportingd`
-      - `com.apple.photoanalysisd`
-      - `com.apple.mediaanalysisd`
-      - `com.apple.wifianalyticsd`
-
-      **Advertising and Privacy:**
-      - `com.apple.ap.adprivacyd`
-      - `com.apple.ap.adservicesd`
-
-      **System Services:**
-      - `com.apple.ActivityMonitor`
-
-      **Miscellaneous:**
-      - `com.apple.touristd`
-      - `com.apple.KeyboardAccessAgent`
-      - `com.apple.SocialPushAgent`
-      - `com.apple.helpd`
-      - `com.apple.macos.studentd`
-
-   - **Service Control**: Disables these services via `launchctl` and `defaults write`.
-
-### 13. Telemetry and Tracking Block
+### 8. Telemetry and Tracking Block
    - **Objective**: Blocks common telemetry and tracking domains, enhancing user privacy by modifying the `/etc/hosts` file.
    - **Domains Blocked**: Microsoft, Apple, Google Analytics, Facebook, and other tracking providers.
    - **Verification**: Ensures all domains are appended to the hosts file, blocking outgoing data requests.
 
-### 14. Additional System Optimizations
-   - **Disable Sudden Motion Sensor** (SSD systems): `pmset -a sms 0`
-   - **Increase File Descriptor Limit**: Configures a higher file descriptor limit for improved app performance.
+### 9. Additional System Optimizations
+   - **Disable Sudden Motion Sensor** (SSD systems): `pmset -a sms 0
    - **Reset LaunchServices Database**: Rebuilds app association database to reduce load times on older systems.
 
 ---
@@ -225,7 +103,7 @@ Microsoft is forcing users to upgrade their Apple hardware by automatically upda
 Here’s a temporary workaround:
 
 1. Remove the incompatible OneDrive.app from the Applications folder.
-2. Download and install the latest compatible version of the OneDrive client (v24.086.0428.0003) from https://oneclient.sfx.ms/Mac/Installers/24.086.0428.0003/universal/OneDrive.pkg.
+2. Download and install the latest compatible version of the OneDrive client for Monterey (v24.101.0519.0010) from https://oneclient.sfx.ms/Mac/Installers/24.101.0519.0010/universal/OneDrive.pkg.
 3. Block future updates by adding this line to your /etc/hosts file:
 
    ```
