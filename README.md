@@ -13,7 +13,7 @@ The **Facet4 macOS Optimization and Debloat Script** is a tool designed to enhan
 When it comes to **daemons and services**, I've made extensive efforts to optimize or disable them, particularly those associated with analytics, performance monitoring, logging, crash reporting, and similar tasks. Believe me, it's not worth your time; you might end up damaging your system! The developers of the OS know what they’re doing. That's why I removed all the relevant elements from the code.
 
 ![memory.png](README/memory.png)
-Nice!!!
+Nice! Just like new!
 
 
 > **Warning**: This script modifies core system configurations and should only be used by advanced users familiar with macOS internals. **Ensure a complete system backup** before proceeding.
