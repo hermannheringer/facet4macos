@@ -87,14 +87,12 @@ fi
 
 
 echo "Disabling Application Nap..."
-
 defaults read NSGlobalDomain
 defaults write -g NSAppSleepDisabled -bool true
 
 
 
 echo "Disabling Spotlight indexing and metadata services..."
-
 mdutil -a -i off
 mdutil -a -E
 mdutil -a -d
@@ -109,25 +107,27 @@ defaults write com.apple.suggestions DoNotShowInMenuBar -bool true
 
 
 echo "Disabling Feedback Assistant..."
-
 defaults read /Library/Preferences/com.apple.feedbackassistant showFeedbackAssistant
 sudo defaults write com.apple.feedbackassistant showFeedbackAssistant -bool false
 
 sudo launchctl print-disabled system | grep appleseed
 sudo defaults write /Library/Preferences/com.apple.appleseed.fbahelperd.plist Disabled -bool true
 
+for service in $(sudo launchctl list | grep -i appleseed | awk '{print $3}'); do  
+  sudo launchctl disable user/$(id -u)/$service 
+  sudo launchctl disable system/$service  
+done  
+
+
 
 
 
 echo "Disables window animations and reduces transparency for improved performance and lower resource usage..."
-
 # Configurações principais de desempenho visual
-
 defaults read -g NSAutomaticWindowAnimationsEnabled
 defaults write -g NSAutomaticWindowAnimationsEnabled -bool false
 
 # Redução de movimento e transparência
-
 defaults read com.apple.universalaccess reduceMotion
 defaults write com.apple.universalaccess reduceMotion -bool true
 
@@ -149,7 +149,6 @@ defaults -currentHost write com.apple.universalaccess reduceTransparency -bool t
 
 
 # Disable Time Machine auto-backup
-
 echo "Check Time Machine status..."
 tmutil status 2>/dev/null
 
@@ -159,14 +158,12 @@ tmutil disable
 
 
 echo "Disabling Recent Apps in Dock..."
-
 defaults read com.apple.dock show-recents
 defaults write com.apple.dock show-recents -bool false
 
 
 
 echo "Disabling Finder Tags..."
-
 defaults read com.apple.finder ShowRecentTags
 sudo defaults write com.apple.finder ShowRecentTags -bool false
 sudo defaults write com.apple.finder ShowSidebarTagsSection -bool false
@@ -193,7 +190,6 @@ sudo pmset -a sms 0
 
 
 # Desativar Relatórios de Falhas (Crash Reporting)
-
 defaults write com.apple.CrashReporter DialogType none
 
 sudo rm -rf /Library/Application\ Support/CrashReporter/DiagnosticMessagesHistory.plist
@@ -201,6 +197,36 @@ sudo rm -rf /Library/Application\ Support/CrashReporter/DiagnosticMessagesHistor
 defaults read /Library/Application\ Support/CrashReporter/DiagnosticMessagesHistory.plist
 sudo defaults write /Library/Application\ Support/CrashReporter/DiagnosticMessagesHistory.plist AutoSubmit -bool false
 sudo defaults write /Library/Application\ Support/CrashReporter/DiagnosticMessagesHistory.plist ThirdPartyDataSubmit -bool false
+
+
+# Disable Core component of macOS system analytics.
+sudo launchctl disable system/com.apple.osanalytics.osanalyticshelper
+sudo rm -rf /var/log/DiagnosticMessages/osanalytics*
+
+# Disable at kernel level
+sudo sysctl kern.monitor.diagnostics=0
+
+# Remove launchd entry
+sudo launchctl bootout system/com.apple.osanalytics.diagnosticmonitor
+
+# Block network communication
+sudo /usr/libexec/ApplicationFirewall/socketfilterfw --add /usr/libexec/analyticsd --getblockall
+
+# Disable specifically
+sudo launchctl disable system/com.apple.analyticsd.messagetracer
+
+# Disable symptom framework
+sudo defaults write /Library/Preferences/com.apple.symptomsd Analytics -bool false
+
+# Remove symptom database
+sudo rm -rf /var/db/symptom_analytics.db*
+
+# Disable crash report metadata generation
+sudo sysctl debug.crash_reporter_info=0
+
+# Remove helper privileges
+sudo chmod 000 /System/Library/LaunchAgents/com.apple.CrashReporterSupportHelper.plist
+
 
 
 
@@ -217,6 +243,14 @@ sudo defaults write com.apple.Siri StatusMenuVisible -bool false
 defaults read com.apple.Siri UserHasDeclinedEnable
 sudo defaults write com.apple.Siri UserHasDeclinedEnable -bool true
 
+for service in $(sudo launchctl list | grep -i siri | awk '{print $3}'); do  
+  sudo launchctl disable user/$(id -u)/$service 
+  sudo launchctl disable system/$service  
+done  
+
+
+
+
 
 # Limite a coleta de logs relacionados à energia
 defaults read /Library/Preferences/com.apple.powermanagement.plist SystemPowerProfile
@@ -228,6 +262,10 @@ defaults read com.apple.AdLib allowApplePersonalizedAdvertising
 defaults write com.apple.AdLib allowApplePersonalizedAdvertising -bool false
 
 
+# Disable ARDAgent ( Network/CPU overhead if enabled )
+sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -deactivate -configure -access -off  
+sudo defaults write /Library/Preferences/com.apple.RemoteManagement ARDAgentEnabled -bool false
+
 
 # Check for active analytics processes
 ps aux | grep -E 'analyticsd|diagnosticd'
@@ -237,8 +275,21 @@ ps aux | grep -E 'analyticsd|diagnosticd'
 defaults read ~/Library/Preferences/com.apple.UsageStats.plist
 
 sudo rm ~/Library/Preferences/com.apple.UsageStats.plist
+
+# Desativa systemstats e bloqueia UsageStats
+  sudo launchctl disable user/$(id -u)/com.apple.systemstatsd 
+  sudo launchctl disable system/com.apple.systemstatsd    
+ 
+  sudo chmod 000 /var/db/usageStats 
+
+for service in $(sudo launchctl list | grep -i systemstats | awk '{print $3}'); do  
+  sudo launchctl disable user/$(id -u)/$service 
+  sudo launchctl disable system/$service  
+done  
+
 sudo rm -rf /private/var/db/systemstats/*
 
+# Desativa o uso de análise de uso
 sudo defaults write /Library/Preferences/com.apple.UsageAnalytics.plist UsageAnalyticsEnabled -bool false
 
 # Collects and submits diagnostic/analytics data to Apple.
@@ -252,30 +303,30 @@ defaults read /Library/Preferences/com.apple.SubmitDiagInfo.plist ThirdPartyData
 sudo defaults write /Library/Preferences/com.apple.SubmitDiagInfo.plist ThirdPartyDataSubmit -bool false
 
 
+sudo launchctl print system
 
 sudo log config --reset
 
-subsystems=$(sudo launchctl print system | grep -oE 'com\.[a-zA-Z0-9._-]+' | sort | uniq)
-for subsystem in $subsystems; do
-    echo "Desativando logs para o subsistema: $subsystem"
-    
-    sudo log config --subsystem "$subsystem" --mode "level:off"
-    
+sudo syslog -c 0  # Clear existing logs  
+
+
+
+components=$(sudo log show --predicate 'eventMessage CONTAINS "com."' --info --last 24h | \
+             grep -o 'com\.[a-zA-Z0-9_]*\.[a-zA-Z0-9_]*' | \
+             cut -d '.' -f 1-3 | sort | uniq)
+
+for subsystem in $components; do
+    sudo log config --subsystem "$subsystem" --mode "level:off, persist:off"
     status=$(sudo log config --subsystem "$subsystem" --status 2>/dev/null)
     echo "Status após alteração: $status"
 done
 
 
 
-subsystems=$(sudo Defaults Domains | grep -oE 'com\.[a-zA-Z0-9._-]+' | sort | uniq)
-for subsystem in $subsystems; do
-    echo "Desativando logs para o domínio: $subsystem"
-    
-    sudo log config --subsystem "$subsystem" --mode "level:off"
-    
-    status=$(sudo log config --subsystem "$subsystem" --status 2>/dev/null)
-    echo "Status após alteração: $status"
-done
+# Reduce I/O and CPU overhead by disabling unused services
+sudo launchctl disable user/$(id -u)/com.apple.spindump
+sudo launchctl disable system/com.apple.spindump  # For system-wide service
+
 
 
 # Limpar logs do sistema
@@ -310,6 +361,11 @@ sudo rm -rf /private/var/log/asl/*
 # Remover estatísticas de uso
 sudo rm ~/Library/Preferences/com.apple.UsageStats.plist
 sudo rm -rf /private/var/db/systemstats/*
+
+
+sudo purge
+
+history -c
 
 
 
