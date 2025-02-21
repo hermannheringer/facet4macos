@@ -2,7 +2,7 @@
 # Facet4 macOS Optimization and Debloat Script
 
 **Author**: Hermann Heringer  
-**Version**: 0.5  
+**Version**: 0.6  
 **Repository**: [GitHub](https://github.com/hermannheringer/)
 
 
@@ -10,7 +10,7 @@
 
 The **Facet4 macOS Optimization and Debloat Script** is a tool designed to enhance macOS performance through systematic adjustments to system services, UI settings, and network configurations. It is ideal for users seeking to reduce memory and CPU usage, streamline background processes, and optimize system responsiveness. 
 
-When it comes to **daemons and services**, I've made extensive efforts to optimize or disable them, particularly those associated with analytics, performance monitoring, logging, crash reporting, and similar tasks. Believe me, it's not worth your time; you might end up damaging your system! The developers of the OS know what they’re doing. That's why I removed all the relevant elements from the code.
+Regarding **daemons and services**, I have taken significant steps to optimize or disable them, especially those related to analytics, performance monitoring, logging, crash reporting, and similar functions. Trust me, it's not worth your time to go beyond what is intended; you might end up damaging your system! The OS developers know what they're doing.
 
 ![memory.png](README/memory.png)
 Nice! Just like new!

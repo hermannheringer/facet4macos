@@ -3,8 +3,8 @@
 
 # Facet4 macOS Configuration Script
 # Author: Hermann Heringer
-# Version : 0.5
-# Date: 2025-02-05
+# Version : 0.6
+# Date: 2025-02-21
 # Source: https://github.com/hermannheringer/
 
 
@@ -105,7 +105,6 @@ defaults write com.apple.suggestions DoNotShowInMenuBar -bool true
 
 
 
-
 echo "Disabling Feedback Assistant..."
 defaults read /Library/Preferences/com.apple.feedbackassistant showFeedbackAssistant
 sudo defaults write com.apple.feedbackassistant showFeedbackAssistant -bool false
@@ -117,8 +116,6 @@ for service in $(sudo launchctl list | grep -i appleseed | awk '{print $3}'); do
   sudo launchctl disable user/$(id -u)/$service 
   sudo launchctl disable system/$service  
 done  
-
-
 
 
 
@@ -140,7 +137,6 @@ defaults write com.apple.Accessibility DifferentiateWithoutColor -bool true
 defaults read com.apple.Accessibility ReduceMotionEnabled
 defaults write com.apple.Accessibility ReduceMotionEnabled -bool true
 
-
 # Aplica para usuário atual e host
 defaults -currentHost read NSGlobalDomain
 defaults -currentHost write NSGlobalDomain NSAutomaticWindowAnimationsEnabled -bool false
@@ -148,11 +144,10 @@ defaults -currentHost write com.apple.universalaccess reduceMotion -bool true
 defaults -currentHost write com.apple.universalaccess reduceTransparency -bool true
 
 
+
 # Disable Time Machine auto-backup
 echo "Check Time Machine status..."
 tmutil status 2>/dev/null
-
-echo "Disable Time Machine..."dock
 tmutil disable
 
 
@@ -164,20 +159,24 @@ defaults write com.apple.dock show-recents -bool false
 
 
 echo "Disabling Finder Tags..."
+rm -rf ~/Library/Preferences/com.apple.finder.plist
+
 defaults read com.apple.finder ShowRecentTags
 sudo defaults write com.apple.finder ShowRecentTags -bool false
 sudo defaults write com.apple.finder ShowSidebarTagsSection -bool false
 sudo defaults write com.apple.finder FXPreferredTagSchemes -array
-
-rm -rf ~/Library/Preferences/com.apple.finder.plist
 
 
 
 echo "This will prevent system and app windows from being restored automatically, potentially reducing cached data load."
 sudo defaults write -g NSQuitAlwaysKeepsWindows -bool false
 
+
+
 echo "Reduce frequency of system updates check (5 days), which can also decrease plist activity..."
 sudo defaults write com.apple.SoftwareUpdate ScheduleFrequency -int 5
+
+
 
 echo "Attempt a cache reduction to decrease the footprint of cfprefsd..."
 sudo defaults write com.apple.cfprefsd ReduceDaemonActivity -bool true
@@ -198,34 +197,69 @@ defaults read /Library/Application\ Support/CrashReporter/DiagnosticMessagesHist
 sudo defaults write /Library/Application\ Support/CrashReporter/DiagnosticMessagesHistory.plist AutoSubmit -bool false
 sudo defaults write /Library/Application\ Support/CrashReporter/DiagnosticMessagesHistory.plist ThirdPartyDataSubmit -bool false
 
+# Remove helper privileges
+sudo chmod 000 /System/Library/LaunchAgents/com.apple.CrashReporterSupportHelper.plist
+
 
 # Disable Core component of macOS system analytics.
-sudo launchctl disable system/com.apple.osanalytics.osanalyticshelper
-sudo rm -rf /var/log/DiagnosticMessages/osanalytics*
+for service in $(sudo launchctl list | grep -i syslogd | awk '{print $3}'); do  
+  sudo launchctl disable user/$(id -u)/$service 
+  sudo launchctl disable system/$service  
+done  
 
-# Disable at kernel level
-sudo sysctl kern.monitor.diagnostics=0
+for service in $(sudo launchctl list | grep -i diagnosticd | awk '{print $3}'); do  
+  sudo launchctl disable user/$(id -u)/$service 
+  sudo launchctl disable system/$service  
+done 
 
-# Remove launchd entry
-sudo launchctl bootout system/com.apple.osanalytics.diagnosticmonitor
+for service in $(sudo launchctl list | grep -i aslmanager | awk '{print $3}'); do  
+  sudo launchctl disable user/$(id -u)/$service 
+  sudo launchctl disable system/$service  
+done 
 
-# Block network communication
-sudo /usr/libexec/ApplicationFirewall/socketfilterfw --add /usr/libexec/analyticsd --getblockall
+for service in $(sudo launchctl list | grep -i osanalytics | awk '{print $3}'); do  
+  sudo launchctl disable user/$(id -u)/$service 
+  sudo launchctl disable system/$service  
+done  
 
-# Disable specifically
-sudo launchctl disable system/com.apple.analyticsd.messagetracer
+
 
 # Disable symptom framework
 sudo defaults write /Library/Preferences/com.apple.symptomsd Analytics -bool false
 
 # Remove symptom database
 sudo rm -rf /var/db/symptom_analytics.db*
+sudo rm -rf /var/log/DiagnosticMessages/osanalytics*
+sudo rm -rf /var/log/DiagnosticMessages/*
 
-# Disable crash report metadata generation
-sudo sysctl debug.crash_reporter_info=0
+# Block network communication
+sudo /usr/libexec/ApplicationFirewall/socketfilterfw --add /usr/libexec/analyticsd --getblockall
 
-# Remove helper privileges
-sudo chmod 000 /System/Library/LaunchAgents/com.apple.CrashReporterSupportHelper.plist
+# Collects and submits diagnostic/analytics data to Apple.
+sudo defaults write /Library/Preferences/com.apple.analyticsd.plist AnalyticsEnabled -bool false
+
+
+for service in $(sudo launchctl list | grep -i analyticsd | awk '{print $3}'); do  
+  sudo launchctl disable user/$(id -u)/$service 
+  sudo launchctl disable system/$service  
+done  
+
+# Disable Memory pressure analysis
+for service in $(sudo launchctl list | grep -i memoryanalyticsd | awk '{print $3}'); do  
+  sudo launchctl disable user/$(id -u)/$service 
+  sudo launchctl disable system/$service  
+done 
+
+
+# Disable Diagnostic Extensions
+for service in $(sudo launchctl list | grep -i diagnosticextensions | awk '{print $3}'); do  
+  sudo launchctl disable user/$(id -u)/$service 
+  sudo launchctl disable system/$service  
+done  
+
+# Check for active analytics processes
+ps aux | grep -E 'analyticsd|diagnosticd'
+
 
 
 
@@ -248,13 +282,17 @@ for service in $(sudo launchctl list | grep -i siri | awk '{print $3}'); do
   sudo launchctl disable system/$service  
 done  
 
-
+# sudo rm -rf ~/Library/Siri
 
 
 
 # Limite a coleta de logs relacionados à energia
 defaults read /Library/Preferences/com.apple.powermanagement.plist SystemPowerProfile
 sudo defaults write /Library/Preferences/com.apple.powermanagement.plist SystemPowerProfile -dict-add "ActivityMonitor" -bool false
+
+# Limpar logs de gerenciamento de energia
+sudo rm -rf /var/log/powermanagement/*
+
 
 
 #  Desativar Publicidade Personalizada
@@ -265,10 +303,6 @@ defaults write com.apple.AdLib allowApplePersonalizedAdvertising -bool false
 # Disable ARDAgent ( Network/CPU overhead if enabled )
 sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -deactivate -configure -access -off  
 sudo defaults write /Library/Preferences/com.apple.RemoteManagement ARDAgentEnabled -bool false
-
-
-# Check for active analytics processes
-ps aux | grep -E 'analyticsd|diagnosticd'
 
 
 # Desativar a Coleta de Estatísticas de Uso
@@ -287,13 +321,17 @@ for service in $(sudo launchctl list | grep -i systemstats | awk '{print $3}'); 
   sudo launchctl disable system/$service  
 done  
 
+# Remover estatísticas de uso
+sudo rm ~/Library/Preferences/com.apple.UsageStats.plist
 sudo rm -rf /private/var/db/systemstats/*
 
-# Desativa o uso de análise de uso
+# Tracks application usage patterns
 sudo defaults write /Library/Preferences/com.apple.UsageAnalytics.plist UsageAnalyticsEnabled -bool false
 
-# Collects and submits diagnostic/analytics data to Apple.
-sudo defaults write /Library/Preferences/com.apple.analyticsd.plist AnalyticsEnabled -bool false
+sudo defaults write /Library/Application\ Support/UsageAnalytics/Enabled -bool false
+
+sudo rm -rf /var/db/UsageAnalyticsLocal/*
+
 
 # Submits diagnostics to Apple automatically.
 defaults read /Library/Preferences/com.apple.SubmitDiagInfo.plist AutoSubmit
@@ -301,6 +339,29 @@ sudo defaults write /Library/Preferences/com.apple.SubmitDiagInfo.plist AutoSubm
 
 defaults read /Library/Preferences/com.apple.SubmitDiagInfo.plist ThirdPartyDataSubmit
 sudo defaults write /Library/Preferences/com.apple.SubmitDiagInfo.plist ThirdPartyDataSubmit -bool false
+
+for service in $(sudo launchctl list | grep -i ReportCrash | awk '{print $3}'); do  
+  sudo launchctl disable user/$(id -u)/$service 
+  sudo launchctl disable system/$service  
+done  
+
+for service in $(sudo launchctl list | grep -i ReportMemoryException | awk '{print $3}'); do  
+  sudo launchctl disable user/$(id -u)/$service 
+  sudo launchctl disable system/$service  
+done  
+
+for service in $(sudo launchctl list | grep -i SubmitDiagInfo | awk '{print $3}'); do  
+  sudo launchctl disable user/$(id -u)/$service 
+  sudo launchctl disable system/$service  
+done  
+
+
+# Disable Wi-Fi diagnostics
+for service in $(sudo launchctl list | grep -i wifianalyticsd | awk '{print $3}'); do  
+  sudo launchctl disable user/$(id -u)/$service 
+  sudo launchctl disable system/$service  
+done  
+
 
 
 sudo launchctl print system
@@ -323,21 +384,27 @@ done
 
 
 
+# Desativa telemetria de processos
+sudo defaults write /Library/Preferences/com.apple.apsd.plist APSLogLevel -int 0
+sudo defaults write /Library/Preferences/com.apple.loginwindow.plist LogOutHook -string "/usr/bin/true"
+
 # Reduce I/O and CPU overhead by disabling unused services
 sudo launchctl disable user/$(id -u)/com.apple.spindump
 sudo launchctl disable system/com.apple.spindump  # For system-wide service
 
+# Remove agentes de telemetria
+sudo rm -rf /usr/libexec/spindump
 
+# Redirecionar logs para /dev/null
+sudo ln -s /dev/null /var/log/system.log
 
 # Limpar logs do sistema
 sudo rm -rf /var/log/*
+sudo rm -rf /var/db/diagnostics/*
 
 # Limpar logs unificados e metadados
 sudo rm -rf /private/var/db/diagnostics/*
 sudo rm -rf /private/var/db/uuidtext/*
-
-# Limpar logs de gerenciamento de energia
-sudo rm -rf /var/log/powermanagement/*
 
 # Limpar logs de crash reports
 sudo rm -rf /Library/Logs/DiagnosticReports/*
@@ -358,9 +425,38 @@ sudo rm -rf /Library/Updates/Logs/*
 # Limpar logs de boot
 sudo rm -rf /private/var/log/asl/*
 
-# Remover estatísticas de uso
-sudo rm ~/Library/Preferences/com.apple.UsageStats.plist
-sudo rm -rf /private/var/db/systemstats/*
+
+
+
+
+# Remoção Completa do Microsoft AutoUpdate
+# Parar serviços em execução
+sudo launchctl bootout system "/Library/LaunchDaemons/com.microsoft.autoupdate.helper.plist"
+sudo launchctl bootout gui/$(id -u) "/Library/LaunchAgents/com.microsoft.update.agent.plist"
+sudo launchctl disable system/com.microsoft.autoupdate.helper
+
+# Excluir arquivos do sistema
+sudo rm -rf "/Library/Application Support/Microsoft/MAU2.0"
+sudo rm -f /Library/LaunchAgents/com.microsoft.update.agent.plist
+sudo rm -f /Library/LaunchDaemons/com.microsoft.autoupdate.helper.plist
+sudo rm -f /Library/PrivilegedHelperTools/com.microsoft.autoupdate.helper
+
+# Excluir preferências do usuário
+rm -rf ~/Library/Preferences/com.microsoft.autoupdate*.plist
+rm -rf ~/Library/Application\ Support/Microsoft\ AU\ Daemon
+
+# Desative o carregamento do agente
+sudo defaults write /Library/LaunchAgents/com.microsoft.update.agent.plist Disabled -bool YES
+sudo defaults write /Library/LaunchAgents/com.microsoft.update.agent.plist RunAtLoad -bool NO
+
+# Trave o arquivo para evitar alterações
+sudo chflags schg /Library/LaunchAgents/com.microsoft.update.agent.plist
+
+# Desative telemetria e verificações automáticas
+defaults write com.microsoft.autoupdate2 'MAUFeedbackEnabled' -bool FALSE
+defaults write com.microsoft.autoupdate2 'SendAllTelemetryEnabled' -bool FALSE
+defaults write com.microsoft.autoupdate2 'StartDaemonOnAppLaunch' -bool FALSE
+
 
 
 sudo purge
