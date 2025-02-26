@@ -105,7 +105,7 @@ Microsoft is forcing users to upgrade their Apple hardware by automatically upda
 Here’s a temporary workaround:
 
 1. Remove the incompatible OneDrive.app from the Applications folder.
-2. Download and install the latest compatible version of the OneDrive client for Monterey (v24.101.0519.0010) from https://oneclient.sfx.ms/Mac/Installers/24.101.0519.0010/universal/OneDrive.pkg.
+2. Download and install the latest compatible version of the OneDrive client for Monterey (v24.101.0519.0010) from MS Oficial Website: https://oneclient.sfx.ms/Mac/Installers/24.101.0519.0010/universal/OneDrive.pkg.
 3. Block future updates by adding this line to your /etc/hosts file:
 
    ```

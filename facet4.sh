@@ -45,7 +45,7 @@ if sysctl -n machdep.cpu.brand_string | grep -q "Intel"; then
 
     current_args=$(nvram boot-args 2>/dev/null)
 
-    if echo "$current_args" | grep -q "serverperfmode=1"; then
+    if echo "$current_args" | grep -q "serverperfmode=1 debug=0 amfi_get_out_of_my_way=1 -no_compat_check"; then
         echo "Performance Mode is already enabled."
     else
         nvram boot-args="serverperfmode=1 ${current_args#boot-args=}"
@@ -68,7 +68,7 @@ echo "Enabling Performance Mode for Intel-based macOS..."
 if [ "$(sysctl -n hw.cputype)" -eq 7 ]; then
 
     current_args=$(nvram boot-args 2>/dev/null | cut -f2-)
-    if [[ "$current_args" == *"serverperfmode=1"* ]]; then
+    if [[ "$current_args" == *"serverperfmode=1 debug=0 amfi_get_out_of_my_way=1 -no_compat_check"* ]]; then
         echo "Performance Mode is already enabled."
     else
         new_args="serverperfmode=1"
@@ -106,9 +106,6 @@ defaults write com.apple.suggestions DoNotShowInMenuBar -bool true
 
 
 echo "Disabling Feedback Assistant..."
-defaults read /Library/Preferences/com.apple.feedbackassistant showFeedbackAssistant
-sudo defaults write com.apple.feedbackassistant showFeedbackAssistant -bool false
-
 sudo launchctl print-disabled system | grep appleseed
 sudo defaults write /Library/Preferences/com.apple.appleseed.fbahelperd.plist Disabled -bool true
 
@@ -137,12 +134,21 @@ defaults write com.apple.Accessibility DifferentiateWithoutColor -bool true
 defaults read com.apple.Accessibility ReduceMotionEnabled
 defaults write com.apple.Accessibility ReduceMotionEnabled -bool true
 
+# Desabilita o widget de notificação do centro de notificação
+defaults write com.apple.notificationcenterui widgetAllowsNMC -bool FALSE
+
+# Desabilita o dashboard
+defaults write com.apple.dashboard mcx-disabled -bool TRUE
+
+# Desabilita a animação de expansão do Dock
+defaults write com.apple.dock expose-animation-duration -float 0
+
 # Aplica para usuário atual e host
-defaults -currentHost read NSGlobalDomain
 defaults -currentHost write NSGlobalDomain NSAutomaticWindowAnimationsEnabled -bool false
 defaults -currentHost write com.apple.universalaccess reduceMotion -bool true
 defaults -currentHost write com.apple.universalaccess reduceTransparency -bool true
 
+defaults -currentHost read NSGlobalDomain
 
 
 # Disable Time Machine auto-backup
@@ -161,11 +167,11 @@ defaults write com.apple.dock show-recents -bool false
 echo "Disabling Finder Tags..."
 rm -rf ~/Library/Preferences/com.apple.finder.plist
 
-defaults read com.apple.finder ShowRecentTags
 sudo defaults write com.apple.finder ShowRecentTags -bool false
 sudo defaults write com.apple.finder ShowSidebarTagsSection -bool false
 sudo defaults write com.apple.finder FXPreferredTagSchemes -array
 
+defaults read com.apple.finder ShowRecentTags
 
 
 echo "This will prevent system and app windows from being restored automatically, potentially reducing cached data load."
@@ -193,12 +199,13 @@ defaults write com.apple.CrashReporter DialogType none
 
 sudo rm -rf /Library/Application\ Support/CrashReporter/DiagnosticMessagesHistory.plist
 
-defaults read /Library/Application\ Support/CrashReporter/DiagnosticMessagesHistory.plist
 sudo defaults write /Library/Application\ Support/CrashReporter/DiagnosticMessagesHistory.plist AutoSubmit -bool false
 sudo defaults write /Library/Application\ Support/CrashReporter/DiagnosticMessagesHistory.plist ThirdPartyDataSubmit -bool false
 
 # Remove helper privileges
 sudo chmod 000 /System/Library/LaunchAgents/com.apple.CrashReporterSupportHelper.plist
+
+defaults read /Library/Application\ Support/CrashReporter/DiagnosticMessagesHistory.plist
 
 
 # Disable Core component of macOS system analytics.
@@ -282,7 +289,52 @@ for service in $(sudo launchctl list | grep -i siri | awk '{print $3}'); do
   sudo launchctl disable system/$service  
 done  
 
+for service in $(sudo launchctl list | grep -i assistant_service | awk '{print $3}'); do  
+  sudo launchctl disable user/$(id -u)/$service 
+  sudo launchctl disable system/$service  
+done  
+
+for service in $(sudo launchctl list | grep -i assistantd | awk '{print $3}'); do  
+  sudo launchctl disable user/$(id -u)/$service 
+  sudo launchctl disable system/$service  
+done  
+
+for service in $(sudo launchctl list | grep -i parsec-fbf | awk '{print $3}'); do  
+  sudo launchctl disable user/$(id -u)/$service 
+  sudo launchctl disable system/$service  
+done  
+
 # sudo rm -rf ~/Library/Siri
+
+# VoiceOver & Speech & Accessibility
+
+for service in $(sudo launchctl list | grep -i VoiceOver | awk '{print $3}'); do  
+  sudo launchctl disable user/$(id -u)/$service 
+  sudo launchctl disable system/$service  
+done
+
+for service in $(sudo launchctl list | grep -i voicememod | awk '{print $3}'); do  
+  sudo launchctl disable user/$(id -u)/$service 
+  sudo launchctl disable system/$service  
+done
+
+for service in $(sudo launchctl list | grep -i accessibility | awk '{print $3}'); do  
+  sudo launchctl disable user/$(id -u)/$service 
+  sudo launchctl disable system/$service  
+done
+
+for service in $(sudo launchctl list | grep -i speech | awk '{print $3}'); do  
+  sudo launchctl disable user/$(id -u)/$service 
+  sudo launchctl disable system/$service  
+done
+
+
+
+
+
+
+
+
 
 
 
@@ -305,10 +357,7 @@ sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resourc
 sudo defaults write /Library/Preferences/com.apple.RemoteManagement ARDAgentEnabled -bool false
 
 
-# Desativar a Coleta de Estatísticas de Uso
-defaults read ~/Library/Preferences/com.apple.UsageStats.plist
 
-sudo rm ~/Library/Preferences/com.apple.UsageStats.plist
 
 # Desativa systemstats e bloqueia UsageStats
   sudo launchctl disable user/$(id -u)/com.apple.systemstatsd 
@@ -328,8 +377,6 @@ sudo rm -rf /private/var/db/systemstats/*
 # Tracks application usage patterns
 sudo defaults write /Library/Preferences/com.apple.UsageAnalytics.plist UsageAnalyticsEnabled -bool false
 
-sudo defaults write /Library/Application\ Support/UsageAnalytics/Enabled -bool false
-
 sudo rm -rf /var/db/UsageAnalyticsLocal/*
 
 
@@ -344,6 +391,11 @@ for service in $(sudo launchctl list | grep -i ReportCrash | awk '{print $3}'); 
   sudo launchctl disable user/$(id -u)/$service 
   sudo launchctl disable system/$service  
 done  
+
+for service in $(sudo launchctl list | grep -i ReportGPURestart | awk '{print $3}'); do  
+  sudo launchctl disable user/$(id -u)/$service 
+  sudo launchctl disable system/$service  
+done 
 
 for service in $(sudo launchctl list | grep -i ReportMemoryException | awk '{print $3}'); do  
   sudo launchctl disable user/$(id -u)/$service 
@@ -363,12 +415,21 @@ for service in $(sudo launchctl list | grep -i wifianalyticsd | awk '{print $3}'
 done  
 
 
+# Disable netbiosd ( NetBIOS over TCP/IP )
+for service in $(sudo launchctl list | grep -i netbiosd | awk '{print $3}'); do  
+  sudo launchctl disable user/$(id -u)/$service 
+  sudo launchctl disable system/$service  
+done 
 
-sudo launchctl print system
+
+
+
+# sudo launchctl print system
 
 sudo log config --reset
 
-sudo syslog -c 0  # Clear existing logs  
+# Clear existing logs
+sudo syslog -c 0  
 
 
 
@@ -390,10 +451,10 @@ sudo defaults write /Library/Preferences/com.apple.loginwindow.plist LogOutHook 
 
 # Reduce I/O and CPU overhead by disabling unused services
 sudo launchctl disable user/$(id -u)/com.apple.spindump
-sudo launchctl disable system/com.apple.spindump  # For system-wide service
+sudo launchctl disable system/com.apple.spindump
 
 # Remove agentes de telemetria
-sudo rm -rf /usr/libexec/spindump
+sudo rm -rf /usr/libexec/spindump/*
 
 # Redirecionar logs para /dev/null
 sudo ln -s /dev/null /var/log/system.log
