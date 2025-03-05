@@ -3,8 +3,8 @@
 
 # Facet4 macOS Configuration Script
 # Author: Hermann Heringer
-# Version : 0.6
-# Date: 2025-02-21
+# Version : 0.7
+# Date: 2025-03-02
 # Source: https://github.com/hermannheringer/
 
 
@@ -40,15 +40,15 @@
 
 
 
-echo "Enabling Performance Mode for Intel-based macOS..."
+# Enabling Performance Mode
 if sysctl -n machdep.cpu.brand_string | grep -q "Intel"; then
-
+    echo "Enabling Performance Mode for Intel-based macOS..."
     current_args=$(nvram boot-args 2>/dev/null)
 
-    if echo "$current_args" | grep -q "serverperfmode=1 debug=0 amfi_get_out_of_my_way=1 -no_compat_check"; then
+    if echo "$current_args" | grep -q "serverperfmode=1"; then
         echo "Performance Mode is already enabled."
     else
-        nvram boot-args="serverperfmode=1 ${current_args#boot-args=}"
+        nvram boot-args="serverperfmode=1 debug=0 keepsyms=0 diagsnap=0 nvram_paniclog=0 log=0x0 kextlog=0 oslog=0 kern.hv_vmm_present=1 pmap_cs_disabled=1 ${current_args#boot-args=}"
     fi
     sleep 1
     new_args=$(nvram boot-args 2>/dev/null)
@@ -58,37 +58,30 @@ if sysctl -n machdep.cpu.brand_string | grep -q "Intel"; then
         echo "Failed to enable Performance Mode. Please check permissions or try again."
     fi
 else
-    echo "This system does not use an Intel CPU. Performance Mode will not be applied."
-fi
+    echo "Enabling Performance Mode for Apple Silicon-based macOS..."
+    current_args=$(nvram boot-args 2>/dev/null)
 
-
-
-# Alternative method to enable Performance Mode for Intel-based macOS:
-echo "Enabling Performance Mode for Intel-based macOS..."
-if [ "$(sysctl -n hw.cputype)" -eq 7 ]; then
-
-    current_args=$(nvram boot-args 2>/dev/null | cut -f2-)
-    if [[ "$current_args" == *"serverperfmode=1 debug=0 amfi_get_out_of_my_way=1 -no_compat_check"* ]]; then
+    if echo "$current_args" | grep -q "serverperfmode=1"; then
         echo "Performance Mode is already enabled."
     else
-        new_args="serverperfmode=1"
-        [[ -n "$current_args" ]] && new_args+=" $current_args"   
-        nvram boot-args="$new_args"
-
+        nvram boot-args="serverperfmode=1 debug=0 keepsyms=0 diagsnap=0 nvram_paniclog=0 log=0x0 kextlog=0 oslog=0 ${current_args#boot-args=}"
     fi
     sleep 1
-    nvram boot-args 2>/dev/null | grep -q "serverperfmode=1" && \
-        echo "Performance Mode is active." || \
-        echo "Failed to enable Performance Mode. Please check permissions."
-else
-    echo "This system does not use an Intel CPU. Performance Mode not applied."
-fi
+    new_args=$(nvram boot-args 2>/dev/null)
+    if echo "$new_args" | grep -q "serverperfmode=1"; then
+        echo "Performance Mode is active."
+    else
+        echo "Failed to enable Performance Mode. Please check permissions or try again."
+    fi
 
+fi
 
 
 echo "Disabling Application Nap..."
 defaults read NSGlobalDomain
 defaults write -g NSAppSleepDisabled -bool true
+sudo pmset -a powernap 0 womp 0
+sudo pmset -c lowpowermode 0 
 
 
 
@@ -209,6 +202,25 @@ defaults read /Library/Application\ Support/CrashReporter/DiagnosticMessagesHist
 
 
 # Disable Core component of macOS system analytics.
+
+# Desativar o Daemon logd Manualmente
+# O daemon logd é o núcleo do ULS. Mesmo com oslog=0, ele pode ser reativado automaticamente pelo sistema. Para garantir que ele não seja executado:
+
+# Edite o arquivo .plist correspondente:
+
+#sudo nano /System/Library/LaunchDaemons/com.apple.logd.plist
+# Adicione a chave <key>Disabled</key> com o valor <true/>:
+
+# <key>Disabled</key>
+# <true/>
+
+#Salve o arquivo e reinicie o sistema.
+
+for service in $(sudo launchctl list | grep -i logd | awk '{print $3}'); do  
+  sudo launchctl disable user/$(id -u)/$service 
+  sudo launchctl disable system/$service  
+done
+
 for service in $(sudo launchctl list | grep -i syslogd | awk '{print $3}'); do  
   sudo launchctl disable user/$(id -u)/$service 
   sudo launchctl disable system/$service  
@@ -327,8 +339,6 @@ for service in $(sudo launchctl list | grep -i speech | awk '{print $3}'); do
   sudo launchctl disable user/$(id -u)/$service 
   sudo launchctl disable system/$service  
 done
-
-
 
 
 
